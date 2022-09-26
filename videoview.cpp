@@ -3,6 +3,8 @@
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QDebug>
+#include <QInputDialog>
+#include <QMessageBox>
 
 VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewSizeMinH) :
     StreamView(NewID, parent, viewSizeMinW, viewSizeMinH)
@@ -12,6 +14,7 @@ VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewS
     m_MediaPlayer.setVideoOutput(&m_MediaStream);
 
     connect(&m_MediaPlayer, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)), this, SLOT(PlayerStatusChanged(QMediaPlayer::MediaStatus)));
+    connect(&m_MediaPlayer, SIGNAL(error(QMediaPlayer::Error)), this, SLOT(PlayerError(QMediaPlayer::Error)));
 
     connect(&m_MediaStream, &MediaStream::sendImage, [this](const QImage& frame) {
 
@@ -50,6 +53,17 @@ void VideoView::ViewMenu_ChoseVideoSource()
     }
 }
 
+void VideoView::ViewMenu_StreamingLinkInput()
+{
+    bool ok;
+    QString address = QInputDialog::getText(this, tr("RTSP"),
+                                         tr("Stream Address"), QLineEdit::Normal,
+                                         tr("rtsp://"), &ok);
+    if (ok && !address.isEmpty()) {
+        loadSource(QUrl(address));
+        //qDebug() << address;
+    }
+}
 
 void VideoView::PlayerStatusChanged(QMediaPlayer::MediaStatus Status)
 {
@@ -69,11 +83,56 @@ void VideoView::PlayerStatusChanged(QMediaPlayer::MediaStatus Status)
     }
 }
 
+void VideoView::PlayerError(QMediaPlayer::Error error)
+{
+    bool bError = true;
+    QMessageBox msgBox;
+
+    switch (error) {
+    case QMediaPlayer::ResourceError:
+    {
+        msgBox.setText("Media resource couldn't be resolved");
+        break;
+    }
+    case QMediaPlayer::NetworkError:
+    {
+        msgBox.setText("A network error occurred.");
+        break;
+    }
+    case QMediaPlayer::AccessDeniedError:
+    {
+        msgBox.setText("There are not the appropriate permissions to play a media resource.");
+        break;
+    }
+    case QMediaPlayer::ServiceMissingError:
+    {
+        msgBox.setText("A valid playback service was not found, playback cannot proceed.");
+        break;
+    }
+    default:
+        bError = false;
+        break;
+    }
+
+    if (bError == true) {
+        msgBox.exec();
+        m_MediaPlayer.stop();
+    }
+}
+
 void VideoView::loadSource(const QUrl &url)
 {
-    //qDebug() << url.path(QUrl::FullyEncoded);
+    qDebug() << url.path(QUrl::FullyEncoded);
+    qDebug() << url.scheme();
+    qDebug() << url.authority(QUrl::FullyEncoded);
+    qDebug() << url.host();
+    qDebug() << url.port();
+    //TODO: Check if scheme is file or rtsp and save related info
 
 #ifdef QT_ON_JETSON
+
+    //TODO: Base on the detected scheme generate corresponding gst pipeline (eg, for filesrc or rtsp)
+
     //m_MediaPlayer.setMedia(QUrl("gst-pipeline: videotestsrc ! qtvideosink"));
     //QString gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! h264parse ! omxh264dec ! videoconvert ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
     QString gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! queue ! h264parse ! nvv4l2decoder ! nvvidconv ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
@@ -97,7 +156,8 @@ void VideoView::buildViewMenu()
 {
     m_ViewMenu.clear();
 
-    m_ViewMenu.addAction("Chose Source..", this, SLOT(ViewMenu_ChoseVideoSource()));
+    m_ViewMenu.addAction("Chose File..", this, SLOT(ViewMenu_ChoseVideoSource()));
+    m_ViewMenu.addAction("Chose Stream (RTSP)..", this, SLOT(ViewMenu_StreamingLinkInput()));
 
     if (m_MediaPlayer.isVideoAvailable()) {
         m_ViewMenu.addSeparator();

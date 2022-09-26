@@ -20,7 +20,9 @@ signals:
 
 public slots:
     void ViewMenu_ChoseVideoSource();
+    void ViewMenu_StreamingLinkInput();
     void PlayerStatusChanged(QMediaPlayer::MediaStatus state);
+    void PlayerError(QMediaPlayer::Error error);
     void DeleteVideoViewRequest();
     void UpdateImageToView(const QImage& frame, const QList<QGraphicsItem*> &overlayItems);
 
