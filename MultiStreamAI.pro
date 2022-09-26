@@ -37,7 +37,7 @@ FORMS += \
     mainwindow.ui
 
 # Project Defines
-DEFINES += QT_ON_JETSON
+# DEFINES += QT_ON_JETSON
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
