@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
+    ui->menubar->setNativeMenuBar(false);
     connect(&m_streamContainer, SIGNAL(ContainerViewUpdateRequest(QString, eStreamViewUpdate)), this, SLOT(handleContainerViewUpdateRequest(QString, eStreamViewUpdate)));
     QWidget *widget = new QWidget;
     widget->setLayout(&m_gridlayout);

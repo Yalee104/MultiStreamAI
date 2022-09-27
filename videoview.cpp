@@ -67,6 +67,7 @@ void VideoView::ViewMenu_StreamingLinkInput()
 
 void VideoView::PlayerStatusChanged(QMediaPlayer::MediaStatus Status)
 {
+    //qDebug() << "PlayerStatusChanged: " << Status;
     switch (Status) {
 
         case QMediaPlayer::LoadedMedia:
@@ -122,20 +123,34 @@ void VideoView::PlayerError(QMediaPlayer::Error error)
 
 void VideoView::loadSource(const QUrl &url)
 {
-    qDebug() << url.path(QUrl::FullyEncoded);
-    qDebug() << url.scheme();
-    qDebug() << url.authority(QUrl::FullyEncoded);
-    qDebug() << url.host();
-    qDebug() << url.port();
-    //TODO: Check if scheme is file or rtsp and save related info
+    //qDebug() << url.path(QUrl::FullyEncoded);
+    //qDebug() << url.scheme();
+    //qDebug() << url.authority(QUrl::FullyEncoded);
+    //qDebug() << url.host();
+    //qDebug() << url.port();
+    //qDebug() << url.toString(QUrl::FullyEncoded);
 
 #ifdef QT_ON_JETSON
 
-    //TODO: Base on the detected scheme generate corresponding gst pipeline (eg, for filesrc or rtsp)
+    QString gstpipe;
+    QString scheme = url.scheme();
 
-    //m_MediaPlayer.setMedia(QUrl("gst-pipeline: videotestsrc ! qtvideosink"));
-    //QString gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! h264parse ! omxh264dec ! videoconvert ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
-    QString gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! queue ! h264parse ! nvv4l2decoder ! nvvidconv ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
+    if (scheme == tr("file")) {
+        //m_MediaPlayer.setMedia(QUrl("gst-pipeline: videotestsrc ! qtvideosink"));
+        //QString gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! h264parse ! omxh264dec ! videoconvert ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
+        gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! queue ! h264parse ! nvv4l2decoder ! nvvidconv ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
+    }
+    else if (scheme == tr("rtsp")) {
+        //gstpipe = QString("gst-pipeline: rtspsrc location=%1://%2%3 ! rtph264depay ! queue ! h264parse ! nvv4l2decoder ! nvvidconv ! qtvideosink").arg(scheme, url.authority(QUrl::FullyEncoded), url.path(QUrl::FullyEncoded));
+        gstpipe = QString("gst-pipeline: rtspsrc location=%1 ! rtph264depay ! queue ! h264parse ! nvv4l2decoder ! nvvidconv ! qtvideosink").arg(url.toString(QUrl::FullyEncoded));
+        qDebug() << gstpipe;
+    }
+    else {
+        QMessageBox msgBox;
+        msgBox.setText("Unsupported media resource.");
+        msgBox.exec();
+    }
+
     m_MediaPlayer.setMedia(QUrl(gstpipe));
 #else
     m_MediaPlayer.setMedia(url);
@@ -159,7 +174,8 @@ void VideoView::buildViewMenu()
     m_ViewMenu.addAction("Chose File..", this, SLOT(ViewMenu_ChoseVideoSource()));
     m_ViewMenu.addAction("Chose Stream (RTSP)..", this, SLOT(ViewMenu_StreamingLinkInput()));
 
-    if (m_MediaPlayer.isVideoAvailable()) {
+    //qDebug() << m_MediaPlayer.mediaStatus();
+    if (m_MediaPlayer.mediaStatus() == QMediaPlayer::BufferedMedia) {
         m_ViewMenu.addSeparator();
         QAction* pPlay = m_ViewMenu.addAction("Play", &m_MediaPlayer, SLOT(play()));
         QAction* pPause = m_ViewMenu.addAction("Pause", &m_MediaPlayer, SLOT(pause()));
