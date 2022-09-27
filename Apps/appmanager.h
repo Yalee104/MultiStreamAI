@@ -29,6 +29,9 @@ signals:
 public slots:
     void AppSelectionTrigger(QAction *action);
 
+public:
+    QString         m_AppID;
+
 protected:
 
     QMenu*          m_pAppMenu = nullptr;

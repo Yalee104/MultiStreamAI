@@ -27,6 +27,9 @@ public:
 
     void setTerminate(bool newTerminate);
 
+public:
+    QString         m_AppID;
+
 protected:
     bool            m_Terminate = false;
     QList<QImage>   *m_pImageInferQueue = nullptr;

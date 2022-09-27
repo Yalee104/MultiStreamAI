@@ -3,7 +3,10 @@
 
 #include <QObject>
 #include <QMutex>
+#include <QQueue>
 #include "Apps/appbaseclass.h"
+#include "Apps/appsequencer.h"
+#include "Apps/ObjectDetection/yolov5_process.h"
 
 class ObjectDetection : public AppBaseClass
 {
@@ -16,14 +19,18 @@ public:
     void ImageInfer(const QImage& frame) override;
     void run() Q_DECL_OVERRIDE;
 
-    void chas(int(*func)(const QImage &image), const QImage &image);
-
 signals:
 
+    void SendToInfer(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
 
 protected:
-    QMutex  ResourceLock;
+
+    ObjectDetectionInfo*            pObjDetInfo = nullptr;
+    QMutex                          ResourceLock;
+    bool                            bFrameInProcess = false;
+    float                           FrameCount;
 
 };
+
 
 #endif // OBJECTDETECTION_H

@@ -18,7 +18,8 @@ SOURCES += \
     mediastream.cpp \
     streamcontainer.cpp \
     streamview.cpp \
-    videoview.cpp
+    videoview.cpp \
+    Apps/ObjectDetection/yolov5_process.cpp
 
 HEADERS += \
     Apps/AppsFactory.h \
@@ -31,15 +32,25 @@ HEADERS += \
     mediastream.h \
     streamcontainer.h \
     streamview.h \
-    videoview.h
+    videoview.h \
+    Apps/ObjectDetection/yolov5_process.h
 
 FORMS += \
     mainwindow.ui
 
 # Project Defines
-# DEFINES += QT_ON_JETSON
+DEFINES += QT_ON_JETSON
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /home/jetsoon/Desktop
 !isEmpty(target.path): INSTALLS += target
+
+unix:!macx: LIBS += -L$$PWD/MultiNetworkPipeline/ -lMultiNetworkPipeline
+INCLUDEPATH += $$PWD/MultiNetworkPipeline
+DEPENDPATH += $$PWD/MultiNetworkPipeline
+unix:!macx: PRE_TARGETDEPS += $$PWD/MultiNetworkPipeline/libMultiNetworkPipeline.a
+
+unix:!macx: LIBS += -L$$PWD/../../../../../usr/lib/ -lhailort
+INCLUDEPATH += $$PWD/../../../../../usr/include/hailo
+DEPENDPATH += $$PWD/../../../../../usr/include/hailo

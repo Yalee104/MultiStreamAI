@@ -68,6 +68,7 @@ void AppManager::AppSelectionTrigger(QAction *action)
 
     //Selected App and Start it in thread pool
     m_pAppRunnableObject = dynamic_cast<AppBaseClass*>(m_AppsFactory.createObject(action->data().toByteArray()));
+    m_pAppRunnableObject->m_AppID = this->m_AppID;
     QThreadPool::globalInstance()->start(m_pAppRunnableObject);
     //Redirect the signal of App result image to AppManager sendImage signal
 

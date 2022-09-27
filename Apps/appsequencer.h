@@ -5,9 +5,10 @@
 #include <QImage>
 
 enum class eAppSequencerState { INIT, READY, STARTED, INIT_FUNCTION_ERROR };
-enum class eSequencerState { INIT, READY, STARTED, DONE };
 
-enum class eAppSeqErrorCode { NOT_READY, OK, SOME_DONE, ERROR_INIT_FUNCTION_FAILED };
+enum class eSequencerState { INIT, READY, STARTED, DONE, ERROR };
+
+enum class eAppSeqErrorCode { NOT_READY, OK, SOME_DONE, ERROR_INIT_FUNCTION_FAILED, SEQUENCE_ERROR };
 
 template <class T, class I>
 class AppSequencer
@@ -20,8 +21,9 @@ class AppSequencer
         T*                      pShareData;
         QImage                  OriginalImage;
         eSequencerState         State;
-        QList<QFuture<void>>    Futures;
+        QList<QFuture<int>>     Futures;
         int                     NextSequenceIndex;
+        QElapsedTimer           timer;
     };
 
     struct  SequenceFunctionInfo {
@@ -35,12 +37,14 @@ public:
         T*                  pShareData;
         QImage              OriginalImage;
         int                 TaskSequenceIndex;
+        QString             AppID;
     };
 
 public:
-    AppSequencer(I* pInitData) {
+    AppSequencer(I* pInitData, QString AppID) {
         MainState = eAppSequencerState::INIT;
         pWorkInitData = pInitData;
+        ID = AppID;
     };
 
     void        AddInitializer(InitFunc func) {
@@ -80,22 +84,25 @@ public:
         return eAppSeqErrorCode::OK;
     };
 
-    TaskSequenceInfo    RetrieveSequenceTaskDoneInfo() {
+    TaskSequenceInfo    RetrieveSequenceTaskInfo(eSequencerState StateToRetrieve) {
 
-        TaskSequenceInfo SequenceTaskDoneInfo;
-        SequenceTaskDoneInfo.bAvailable = false;
-        if (SequencerTask.count()) {
-            for (int i = 0; i < SequencerTask.count(); i++) {
-                if (SequencerTask[i].State == eSequencerState::DONE) {
-                    SequenceTaskDoneInfo.bAvailable = true;
-                    SequenceTaskDoneInfo.TaskSequenceIndex = i;
-                    SequenceTaskDoneInfo.OriginalImage = SequencerTask[i].OriginalImage;
-                    SequenceTaskDoneInfo.pShareData = SequencerTask[i].pShareData;
-                    break;
+        TaskSequenceInfo SequenceTaskInfo;
+        SequenceTaskInfo.bAvailable = false;
+        if ((StateToRetrieve == eSequencerState::DONE) || (StateToRetrieve == eSequencerState::ERROR)) {
+            if (SequencerTask.count()) {
+                for (int i = 0; i < SequencerTask.count(); i++) {
+                    if (SequencerTask[i].State == StateToRetrieve) {
+                        SequenceTaskInfo.bAvailable = true;
+                        SequenceTaskInfo.TaskSequenceIndex = i;
+                        SequenceTaskInfo.OriginalImage = SequencerTask[i].OriginalImage;
+                        SequenceTaskInfo.pShareData = SequencerTask[i].pShareData;
+                        SequenceTaskInfo.AppID = ID;
+                        break;
+                    }
                 }
             }
         }
-        return SequenceTaskDoneInfo;
+        return SequenceTaskInfo;
     };
 
     void                RemoveSequenceTask(TaskSequenceInfo &TaskSequenceToRemove) {
@@ -138,11 +145,19 @@ public:
 
                 for (int i = 0; i < SequencerTask.count(); i++) {
                     if (SequencerTask[i].State == eSequencerState::READY) {
+
+#if 1
                         if (SequencerTask[i].Futures.count()) {
                             //We have running task taking in place
                             bool bAllDone = true;
+                            for (QFuture TaskFuture : SequencerTask[i].Futures) {
 
-                            for (QFuture<void> TaskFuture : SequencerTask[i].Futures) {
+                                if (TaskFuture.result() != 0) {
+                                    SequencerTask[i].State = eSequencerState::ERROR; //Prevent this task sequence to proceed
+                                    ErrorCode = eAppSeqErrorCode::SEQUENCE_ERROR;
+                                    break;
+                                }
+
                                 if (!TaskFuture.isFinished()) {
                                     bAllDone = false;
                                     break;
@@ -150,6 +165,7 @@ public:
                             }
 
                             if (bAllDone) {
+                                //qDebug() << "Sequence index done " << SequencerTask[i].NextSequenceIndex << " ," << SequencerTask[i].timer.nsecsElapsed();
                                 SequencerTask[i].Futures.clear();
                                 SequencerTask[i].NextSequenceIndex++;
                             }
@@ -161,14 +177,59 @@ public:
                                 //We are all done
                                 SequencerTask[i].State = eSequencerState::DONE;
                                 ErrorCode = eAppSeqErrorCode::SOME_DONE;
+                                //qDebug() << SequencerTask[i].timer.nsecsElapsed();
                             }
                             else {
                                 //Let run task
                                 //TODO: Implement parallel task
-                                QFuture<void> TaskFuture = QtConcurrent::run(SequenceFunctionList[NextSequenceIndex].func, pWorkInitData, SequencerTask[i].pShareData, SequencerTask[i].OriginalImage);
+                                if (NextSequenceIndex == 0)
+                                    SequencerTask[i].timer.start();
+
+                                QFuture<int> TaskFuture = QtConcurrent::run(SequenceFunctionList[NextSequenceIndex].func, pWorkInitData, SequencerTask[i].pShareData, SequencerTask[i].OriginalImage);
                                 SequencerTask[i].Futures.push_back(TaskFuture);
                             }
                         }
+#else
+
+                        int NextSequenceIndex = SequencerTask[i].NextSequenceIndex;
+                        if (NextSequenceIndex >= SequenceFunctionList.count()) {
+                            //We are all done
+                            SequencerTask[i].State = eSequencerState::DONE;
+                            ErrorCode = eAppSeqErrorCode::SOME_DONE;
+                            qDebug() << SequencerTask[i].timer.nsecsElapsed();
+
+                        }
+                        else {
+                            //Let run task
+                            //TODO: Implement parallel task
+                            if (NextSequenceIndex == 0)
+                                SequencerTask[i].timer.start();
+
+                            int retcode = SequenceFunctionList[NextSequenceIndex].func(pWorkInitData, SequencerTask[i].pShareData, SequencerTask[i].OriginalImage);
+                            if (retcode == 0)
+                                SequencerTask[i].NextSequenceIndex++;
+
+                            if (retcode == -1) {
+                                SequencerTask[i].State = eSequencerState::ERROR; //Prevent this task sequence to proceed
+                                ErrorCode = eAppSeqErrorCode::SEQUENCE_ERROR;
+                                qDebug() << "SEQUENCE ERROR";
+                            }
+
+                        }
+
+#endif
+                    }
+
+                    if (ErrorCode == eAppSeqErrorCode::SOME_DONE) {
+                        qDebug() << "eAppSeqErrorCode::SOME_DONE";
+                        break;
+                    }
+
+                    //If we have any sequence error - break the loop right away to prevent executing other task
+                    //Application should handle this right away by retrieving the error task and remove it explicitly by calliing
+                    //RemoveSequenceTask
+                    if (ErrorCode == eAppSeqErrorCode::SEQUENCE_ERROR) {
+                        break;
                     }
                 }
             }
@@ -176,7 +237,14 @@ public:
         return ErrorCode;
     };
 
+    int         getTotalSequenceTask() {
+        //TODO: maybe we can consider returnning only sequence that are running and ignore
+        //      the error and done. However, this will waste a bit of time.
+        return SequencerTask.count();
+    }
+
 protected:
+    QString                         ID;
     eAppSequencerState              MainState;
     I*                              pWorkInitData = nullptr;
     QList<SequencerData>            SequencerTask;
