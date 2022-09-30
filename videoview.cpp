@@ -13,6 +13,8 @@ VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewS
 
     m_MediaPlayer.setVideoOutput(&m_MediaStream);
 
+    m_AppManager.m_AppID = NewID;
+
     connect(&m_MediaPlayer, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)), this, SLOT(PlayerStatusChanged(QMediaPlayer::MediaStatus)));
     connect(&m_MediaPlayer, SIGNAL(error(QMediaPlayer::Error)), this, SLOT(PlayerError(QMediaPlayer::Error)));
 

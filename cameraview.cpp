@@ -11,6 +11,8 @@ CameraView::CameraView(QString NewID, QWidget *parent, int viewSizeMinW, int vie
 {
     setHelperDescription("    Right Click\nTo Select Camera");
 
+    m_AppManager.m_AppID = NewID;
+
     QObject::connect(&m_MediaStream, &MediaStream::sendImage, [this](const QImage& frame) {
 
         if (m_AppManager.AppSelected() == false)
