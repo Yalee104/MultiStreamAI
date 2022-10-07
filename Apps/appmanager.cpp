@@ -66,6 +66,15 @@ void AppManager::AppSelectionTrigger(QAction *action)
 
     ReleaseCurrentApp();
 
+    // If the threadpool maximum allowed thread is low we need to increase the number otherwise it will creash the app
+    // TODO: Alternatively we can also limit this to prevent application adding too much of stream
+    int CurrentActiveThreadCount = QThreadPool::globalInstance()->activeThreadCount();
+    int MaximumAvailableThreadCount = QThreadPool::globalInstance()->maxThreadCount();
+    //qDebug() << CurrentActiveThreadCount;
+    //qDebug() << MaximumAvailableThreadCount;
+    if (CurrentActiveThreadCount+1 >=  MaximumAvailableThreadCount)
+        QThreadPool::globalInstance()->setMaxThreadCount(MaximumAvailableThreadCount+2);
+
     //Selected App and Start it in thread pool
     m_pAppRunnableObject = dynamic_cast<AppBaseClass*>(m_AppsFactory.createObject(action->data().toByteArray()));
     m_pAppRunnableObject->m_AppID = this->m_AppID;
