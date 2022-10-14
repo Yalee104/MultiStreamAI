@@ -35,7 +35,7 @@ protected:
     QGraphicsPixmapItem     m_videoPixelmapItem;
     QGraphicsTextItem*      m_pHelperDescription = nullptr;  //auto release by parent
     QGraphicsItemGroup*     m_pMainImageItemGroup = nullptr; //auto release by parent
-    bool Hidden;
+    bool Hidden = false;
 
 };
 
