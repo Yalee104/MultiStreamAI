@@ -118,6 +118,10 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     QPainter qPainter(&pData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
+    QFont font;
+    font.setPixelSize(24);
+    qPainter.setFont(font);
+
     float widthScale = pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
     float heightScale = pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
 
@@ -131,7 +135,7 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
                             pData->DecodedResult[k*6+3]*widthScale - pData->DecodedResult[k*6+1]*widthScale,
                             pData->DecodedResult[k*6+2]*heightScale - pData->DecodedResult[k*6]*heightScale);
 
-        qPainter.drawText(5,15, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
+        qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
     }
 
     qPainter.end();
