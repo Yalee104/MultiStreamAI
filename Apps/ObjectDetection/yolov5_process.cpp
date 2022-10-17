@@ -3,6 +3,8 @@
 #include <QThread>
 #include <QElapsedTimer>
 
+void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetection> &detectionsResult);
+
 
 int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
@@ -36,8 +38,6 @@ void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
-
-    QElapsedTimer timer;
 
     //TODO: Check if we have room for perfformance improvement such as
     //      1. Faster scaling?
@@ -139,15 +139,13 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     qPainter.end();
 
-     //yolov5_print_output_result(totalDetections, pData->DecodedResult);
+    //yolov5_print_output_result(pInfo, totalDetections, pData->DecodedResult);
 
 }
 
 
 std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
-
-    //QElapsedTimer timer;
 
     static float32_t thr = 0.3;
     static bool Initialized = false;
@@ -176,18 +174,13 @@ std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::v
         Initialized = true;
     }
 
-    //NOTE: It takes 6ms here!!!!... need to improve performance of this
-    //timer.start();
     return Yolov5Decoder.decode(OutputForDecode[0], OutputForDecode[1], OutputForDecode[2]);
-    //pShareData->TotalPrediction = pShareData->DecodedResult.size() / 6;
-    //qDebug() << timer.nsecsElapsed();
-
 }
 
 
-QString get_coco_name_from_int(int cls)
+std::string get_coco_name_from_int(int cls)
 {
-    QString result = "N/A";
+    std::string result = "N/A";
     switch(cls) {
         case 0: result = "__background__";break;
         case 1: result = "person";break;
@@ -274,14 +267,15 @@ QString get_coco_name_from_int(int cls)
     return result;
 }
 
-void yolov5_print_output_result(size_t total_detection, std::vector<float32_t> &detectionsResult)
+void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetection> &detectionsResult)
 {
+
     QDebug debug1 = qDebug();
     //For each detection we show its detail as output in text as well as visualization
     if (total_detection > 0) {
         debug1 << "-I- Num detections: " << total_detection << " Classes: [";
         for (size_t i = 0; i < total_detection;i++)
-            debug1 << get_coco_name_from_int(detectionsResult[i*6+4]) << " ";
+            debug1 << get_coco_name_from_int(detectionsResult[i].get_class_id()).data() << " ";
         debug1 << "]";
 
 
@@ -294,13 +288,14 @@ void yolov5_print_output_result(size_t total_detection, std::vector<float32_t> &
         for (size_t k = 0; k < total_detection; k++){
             QDebug debug2 = qDebug();
             debug2 << "-I- Detection Data: [";
-            for (size_t i = 0; i < 6; i++){
-                if (i >=4)
-                    debug2 << detectionsResult[k*6+i] << " ";
-                else
-                    debug2 << detectionsResult[k*6+i]*640 << " ";
-            }
-            if (detectionsResult[k*6+5] < 0.5)
+            debug2 << detectionsResult[k].get_bbox().ymin() * pInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k].get_bbox().xmin() * pInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k].get_bbox().ymax() * pInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k].get_bbox().xmax() * pInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k].get_class_id() << " ";
+            debug2 << detectionsResult[k].get_confidence() << " ";
+
+            if (detectionsResult[k].get_confidence() < 0.5)
                 debug2 << "] - LOW Provability prediction (less than 50%)";
             else
                 debug2 << "]";
