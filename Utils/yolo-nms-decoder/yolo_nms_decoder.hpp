@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <functional>
 #include <type_traits>
-
 #include <QElapsedTimer>
 #include <QDebug>
 
@@ -62,10 +61,10 @@ class YoloNmsDecoder {
 
 
     float iou_calc(const DetectionObject &box_1, const DetectionObject &box_2) {
-        const float width_of_overlap_area = std::min(box_1.xmax, box_2.xmax) - std::max(box_1.xmin, box_2.xmin);
-        const float height_of_overlap_area = std::min(box_1.ymax, box_2.ymax) - std::max(box_1.ymin, box_2.ymin);
-        const float positive_width_of_overlap_area = std::max(width_of_overlap_area, 0.0f);
-        const float positive_height_of_overlap_area = std::max(height_of_overlap_area, 0.0f);
+        const float width_of_overlap_area = (std::min)(box_1.xmax, box_2.xmax) - (std::max)(box_1.xmin, box_2.xmin);
+        const float height_of_overlap_area = (std::min)(box_1.ymax, box_2.ymax) - (std::max)(box_1.ymin, box_2.ymin);
+        const float positive_width_of_overlap_area = (std::max)(width_of_overlap_area, 0.0f);
+        const float positive_height_of_overlap_area = (std::max)(height_of_overlap_area, 0.0f);
         const float area_of_overlap = positive_width_of_overlap_area * positive_height_of_overlap_area;
         const float box_1_area = (box_1.ymax - box_1.ymin)  * (box_1.xmax - box_1.xmin);
         const float box_2_area = (box_2.ymax - box_2.ymin)  * (box_2.xmax - box_2.xmin);

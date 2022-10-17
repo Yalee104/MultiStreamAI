@@ -55,7 +55,7 @@ public:
     return dt;
   }
 
-  size_t getStartTime() const
+  double getStartTime() const
   {
     return std::chrono::duration_cast<second_type>(m_startTime.time_since_epoch()).count();
   }

@@ -214,10 +214,10 @@ void MultiNetworkPipeline::ProcessInferDataInQueue()
     {
         bool        data_process_done = false;  
         bool        terminate_process = false;
-        size_t      earliest_requested_time = std::numeric_limits<size_t>::max();  
+        size_t      earliest_requested_time = (std::numeric_limits<size_t>::max)();
         std::string queue_networkname_to_infer;  
-
         ProtectMutex_MapQueueInferData.lock();
+
         for (auto &inferData : MapQueueInferData)
         {
             DBG_DEBUG("ProcessInferDataInQueue received from : " << inferData.first);
@@ -1135,7 +1135,7 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
 
     //NOTE: device_id not used at the moment, reserve for future use    
     if (GetNetworkInfoByName_Unprotect(NewNetworkInfo.id_name))
-       return MnpReturnCode::DUPLICATE;
+       return MnpReturnCode::DUPLICATED;
 
     //Create device if not already created
     if (devices[device_id] == NULL)
