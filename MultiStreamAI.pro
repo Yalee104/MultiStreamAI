@@ -27,6 +27,10 @@ HEADERS += \
     Apps/appbaseclass.h \
     Apps/appmanager.h \
     Apps/appsequencer.h \
+    Utils/hailo-common/hailo_common.hpp \
+    Utils/hailo-common/hailo_objects.hpp \
+    Utils/hailo-common/hailo_tensors.hpp \
+    Utils/yolo-nms-decoder/yolo_nms_decoder.hpp \
     cameraview.h \
     mainwindow.h \
     mediastream.h \
@@ -39,18 +43,31 @@ FORMS += \
     mainwindow.ui
 
 # Project Defines
-DEFINES += QT_ON_JETSON
+# DEFINES += QT_ON_JETSON
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /home/jetsoon/Desktop
 !isEmpty(target.path): INSTALLS += target
 
+# Linux MultiNetworkPipeline
 unix:!macx: LIBS += -L$$PWD/MultiNetworkPipeline/ -lMultiNetworkPipeline
 INCLUDEPATH += $$PWD/MultiNetworkPipeline
 DEPENDPATH += $$PWD/MultiNetworkPipeline
 unix:!macx: PRE_TARGETDEPS += $$PWD/MultiNetworkPipeline/libMultiNetworkPipeline.a
 
+# Linux HailoRT
 unix:!macx: LIBS += -L$$PWD/../../../../../usr/lib/ -lhailort
 INCLUDEPATH += $$PWD/../../../../../usr/include/hailo
 DEPENDPATH += $$PWD/../../../../../usr/include/hailo
+
+# WINDOWS HailoRT
+win32: LIBS += -L$$PWD/'../../../../Program Files/HailoRT/lib/' -llibhailort
+INCLUDEPATH += $$PWD/'../../../../Program Files/HailoRT/include'
+DEPENDPATH += $$PWD/'../../../../Program Files/HailoRT/include'
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/release/ -lMultiNetworkPipeline
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/debug/ -lMultiNetworkPipeline
+
+INCLUDEPATH += $$PWD/MultiNetworkPipeline
+DEPENDPATH += $$PWD/MultiNetworkPipeline

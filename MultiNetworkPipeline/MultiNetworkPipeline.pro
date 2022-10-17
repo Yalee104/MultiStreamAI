@@ -35,3 +35,8 @@ unix:!macx: LIBS += -L$$PWD/../../../../../../usr/lib/ -lhailort
 
 INCLUDEPATH += $$PWD/../../../../../../usr/include/hailo
 DEPENDPATH += $$PWD/../../../../../../usr/include/hailo
+
+win32: LIBS += -L$$PWD/'../../../../../Program Files/HailoRT/lib/' -llibhailort
+
+INCLUDEPATH += $$PWD/'../../../../../Program Files/HailoRT/include'
+DEPENDPATH += $$PWD/'../../../../../Program Files/HailoRT/include'
