@@ -194,7 +194,7 @@ public:
         return this->TotalOutputAdded;
     }
 
-    std::vector<HailoDetection> decode(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3) {
+    std::vector<HailoDetectionPtr> decode(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3) {
         size_t num_boxes = 0;
         std::vector<DetectionObject> objects;
         objects.reserve(MAX_BOXES);
@@ -240,13 +240,13 @@ public:
 
         //std::cout << "num_boxes: " << num_boxes << std::endl;
         // Copy the results
-        std::vector<HailoDetection> results;
+        std::vector<HailoDetectionPtr> results;
         if (num_boxes > 0) {
 
             for (const auto &obj: objects) {
                 if (obj.confidence >= this->ConfidenceThreshold) {
-                    results.push_back(HailoDetection(HailoBBox(obj.xmin, obj.ymin, obj.xmax - obj.xmin, obj.ymax - obj.ymin),
-                                                     (float)obj.class_id, "", obj.confidence));
+                    results.push_back(std::make_shared<HailoDetection>(HailoDetection(  HailoBBox(obj.xmin, obj.ymin, obj.xmax - obj.xmin, obj.ymax - obj.ymin),
+                                                                                        (float)obj.class_id, "", obj.confidence)));
                 }
             }
             return results;

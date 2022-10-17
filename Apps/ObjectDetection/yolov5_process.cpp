@@ -126,13 +126,13 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k].get_confidence() < 0.4)
+        if (pData->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
-        qPainter.drawRect(  pData->DecodedResult[k].get_bbox().xmin()*widthScale,
-                            pData->DecodedResult[k].get_bbox().ymin()*heightScale,
-                            pData->DecodedResult[k].get_bbox().width()*widthScale,
-                            pData->DecodedResult[k].get_bbox().height()*heightScale);
+        qPainter.drawRect(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pData->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pData->DecodedResult[k]->get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
     }
@@ -144,7 +144,7 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 }
 
 
-std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
 
     static float32_t thr = 0.3;
@@ -267,7 +267,7 @@ std::string get_coco_name_from_int(int cls)
     return result;
 }
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetection> &detectionsResult)
+void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -275,9 +275,8 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
     if (total_detection > 0) {
         debug1 << "-I- Num detections: " << total_detection << " Classes: [";
         for (size_t i = 0; i < total_detection;i++)
-            debug1 << get_coco_name_from_int(detectionsResult[i].get_class_id()).data() << " ";
+            debug1 << get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
         debug1 << "]";
-
 
         //Show Detail Text Outputs
         //Each detection is 6 bytes with the following mapping arrangement
@@ -288,14 +287,14 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
         for (size_t k = 0; k < total_detection; k++){
             QDebug debug2 = qDebug();
             debug2 << "-I- Detection Data: [";
-            debug2 << detectionsResult[k].get_bbox().ymin() * pInfo->NetworkInputHeight << " ";
-            debug2 << detectionsResult[k].get_bbox().xmin() * pInfo->NetworkInputWidth << " ";
-            debug2 << detectionsResult[k].get_bbox().ymax() * pInfo->NetworkInputHeight << " ";
-            debug2 << detectionsResult[k].get_bbox().xmax() * pInfo->NetworkInputWidth << " ";
-            debug2 << detectionsResult[k].get_class_id() << " ";
-            debug2 << detectionsResult[k].get_confidence() << " ";
+            debug2 << detectionsResult[k]->get_bbox().ymin() * pInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k]->get_bbox().xmin() * pInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k]->get_bbox().ymax() * pInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k]->get_bbox().xmax() * pInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k]->get_class_id() << " ";
+            debug2 << detectionsResult[k]->get_confidence() << " ";
 
-            if (detectionsResult[k].get_confidence() < 0.5)
+            if (detectionsResult[k]->get_confidence() < 0.5)
                 debug2 << "] - LOW Provability prediction (less than 50%)";
             else
                 debug2 << "]";

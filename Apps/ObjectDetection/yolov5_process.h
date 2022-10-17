@@ -44,7 +44,7 @@ struct ObjectDetectionInfo {
 
 struct ObjectDetectionData {
 
-    std::vector<HailoDetection>         DecodedResult;
+    std::vector<HailoDetectionPtr>      DecodedResult;
     int                                 TotalPrediction;
     QImage                              VisualizedImage;
 
@@ -52,7 +52,7 @@ struct ObjectDetectionData {
 
 int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID);
 
-std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
+std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
 
 int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData);
 
