@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <functional>
 #include <type_traits>
+#include "Utils/hailo-common/hailo_common.hpp"
+
 #include <QElapsedTimer>
 #include <QDebug>
 
@@ -192,7 +194,7 @@ public:
         return this->TotalOutputAdded;
     }
 
-    std::vector<float> decode(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3) {
+    std::vector<HailoDetection> decode(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3) {
         size_t num_boxes = 0;
         std::vector<DetectionObject> objects;
         objects.reserve(MAX_BOXES);
@@ -238,20 +240,13 @@ public:
 
         //std::cout << "num_boxes: " << num_boxes << std::endl;
         // Copy the results
-        std::vector<float> results;
+        std::vector<HailoDetection> results;
         if (num_boxes > 0) {
-            int box_ptr = 0;
 
-            results.resize(num_boxes * 6);
             for (const auto &obj: objects) {
                 if (obj.confidence >= this->ConfidenceThreshold) {
-                    results[box_ptr*6 + 0] = obj.ymin;
-                    results[box_ptr*6 + 1] = obj.xmin;
-                    results[box_ptr*6 + 2] = obj.ymax;
-                    results[box_ptr*6 + 3] = obj.xmax;
-                    results[box_ptr*6 + 4] = (float)obj.class_id;
-                    results[box_ptr*6 + 5] = obj.confidence;                
-                    box_ptr += 1;                    
+                    results.push_back(HailoDetection(HailoBBox(obj.xmin, obj.ymin, obj.xmax - obj.xmin, obj.ymax - obj.ymin),
+                                                     (float)obj.class_id, "", obj.confidence));
                 }
             }
             return results;

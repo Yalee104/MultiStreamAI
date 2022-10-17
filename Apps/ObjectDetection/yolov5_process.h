@@ -9,6 +9,7 @@
 #include <hailo/hailort.h>
 #include "MultiNetworkPipeline.hpp"
 #include "Utils/yolo-nms-decoder/yolo_nms_decoder.hpp"
+#include "Utils/hailo-common/hailo_common.hpp"
 
 #include <QObject>
 #include <QMutex>
@@ -43,7 +44,7 @@ struct ObjectDetectionInfo {
 
 struct ObjectDetectionData {
 
-    std::vector<float32_t>              DecodedResult;
+    std::vector<HailoDetection>         DecodedResult;
     int                                 TotalPrediction;
     QImage                              VisualizedImage;
 
@@ -51,7 +52,7 @@ struct ObjectDetectionData {
 
 int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID);
 
-std::vector<float32_t> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
+std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
 
 int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData);
 

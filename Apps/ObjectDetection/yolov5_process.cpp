@@ -93,7 +93,6 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
             //timer.start();
 
-            //std::vector<float32_t> DecodedResult;
             pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
             //qDebug() << "output readed at " << timer.nsecsElapsed();
 
@@ -114,7 +113,7 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
-    int totalDetections = pData->DecodedResult.size()/6;
+    int totalDetections = pData->DecodedResult.size();
     QPainter qPainter(&pData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
@@ -127,13 +126,13 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k*6+5] < 0.4)
+        if (pData->DecodedResult[k].get_confidence() < 0.4)
             continue;
 
-        qPainter.drawRect(  pData->DecodedResult[k*6+1]*widthScale,
-                            pData->DecodedResult[k*6]*heightScale,
-                            pData->DecodedResult[k*6+3]*widthScale - pData->DecodedResult[k*6+1]*widthScale,
-                            pData->DecodedResult[k*6+2]*heightScale - pData->DecodedResult[k*6]*heightScale);
+        qPainter.drawRect(  pData->DecodedResult[k].get_bbox().xmin()*widthScale,
+                            pData->DecodedResult[k].get_bbox().ymin()*heightScale,
+                            pData->DecodedResult[k].get_bbox().width()*widthScale,
+                            pData->DecodedResult[k].get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
     }
@@ -145,7 +144,7 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 }
 
 
-std::vector<float32_t> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetection> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
 
     //QElapsedTimer timer;
