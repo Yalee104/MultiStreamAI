@@ -2,7 +2,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets multimedia concurrent
 
-CONFIG += c++17
+CONFIG += c++14
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -99,3 +99,6 @@ else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../OpenCV-4.5.
 
 INCLUDEPATH += $$PWD/../../../../OpenCV-4.5.4/opencv/build/include
 DEPENDPATH += $$PWD/../../../../OpenCV-4.5.4/opencv/build/include
+
+unix:CONFIG += link_pkgconfig
+unix:PKGCONFIG += opencv4
