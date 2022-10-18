@@ -2,8 +2,6 @@
 
 This is a AI Demo Project on QT that support x86 and embedded (ARM) platform with Hailo AI Accelerator, this project supports QT version 5.12 or latest, although it may still be possible to support 5.10 but it is not tested.
 
-NOTE: In this branch 'StreamingOnly' the hailo AI integration portion is removed, this is intended for a pure streaming test on different platform before adding Hailo related code/API/library
-
 
 # Platform Config
 
