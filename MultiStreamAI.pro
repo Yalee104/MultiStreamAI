@@ -12,6 +12,7 @@ SOURCES += \
     Apps/ObjectDetection/objectdetection.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
+    Utils/tracking/hailo_tracker.cpp \
     cameraview.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -30,6 +31,18 @@ HEADERS += \
     Utils/hailo-common/hailo_common.hpp \
     Utils/hailo-common/hailo_objects.hpp \
     Utils/hailo-common/hailo_tensors.hpp \
+    Utils/tracking/hailo_tracker.hpp \
+    Utils/tracking/jde_tracker/jde_tracker.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_converters.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_embedding.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_ious.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_lapjv.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_strack_management.hpp \
+    Utils/tracking/jde_tracker/jde_tracker_update.hpp \
+    Utils/tracking/jde_tracker/kalman_filter.hpp \
+    Utils/tracking/jde_tracker/lapjv.hpp \
+    Utils/tracking/jde_tracker/strack.hpp \
+    Utils/tracking/jde_tracker/tracker_macros.hpp \
     Utils/yolo-nms-decoder/yolo_nms_decoder.hpp \
     cameraview.h \
     mainwindow.h \
@@ -38,6 +51,11 @@ HEADERS += \
     streamview.h \
     videoview.h \
     Apps/ObjectDetection/yolov5_process.h
+
+INCLUDEPATH += $$PWD/Utils/hailo-common
+INCLUDEPATH += $$PWD/Utils/tracking
+INCLUDEPATH += $$PWD/Utils/xtensor-master/include
+INCLUDEPATH += $$PWD/Utils/xtl-master/include
 
 FORMS += \
     mainwindow.ui
@@ -56,6 +74,12 @@ INCLUDEPATH += $$PWD/MultiNetworkPipeline
 DEPENDPATH += $$PWD/MultiNetworkPipeline
 unix:!macx: PRE_TARGETDEPS += $$PWD/MultiNetworkPipeline/libMultiNetworkPipeline.a
 
+# Windows MultiNetworkPipeline
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/release/ -lMultiNetworkPipeline
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/debug/ -lMultiNetworkPipeline
+INCLUDEPATH += $$PWD/MultiNetworkPipeline
+DEPENDPATH += $$PWD/MultiNetworkPipeline
+
 # Linux HailoRT
 unix:!macx: LIBS += -L$$PWD/../../../../../usr/lib/ -lhailort
 INCLUDEPATH += $$PWD/../../../../../usr/include/hailo
@@ -66,8 +90,12 @@ win32: LIBS += -L$$PWD/'../../../../Program Files/HailoRT/lib/' -llibhailort
 INCLUDEPATH += $$PWD/'../../../../Program Files/HailoRT/include'
 DEPENDPATH += $$PWD/'../../../../Program Files/HailoRT/include'
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/release/ -lMultiNetworkPipeline
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/debug/ -lMultiNetworkPipeline
+# Windows OpenCV
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../../OpenCV-4.5.4/opencv/build/x64/vc15/lib/ -lopencv_world454
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../OpenCV-4.5.4/opencv/build/x64/vc15/lib/ -lopencv_world454d
 
-INCLUDEPATH += $$PWD/MultiNetworkPipeline
-DEPENDPATH += $$PWD/MultiNetworkPipeline
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../../../OpenCV-4.5.4/opencv/build/x64/vc15/bin/ -lopencv_world454
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../../../OpenCV-4.5.4/opencv/build/x64/vc15/bin/ -lopencv_world454d
+
+INCLUDEPATH += $$PWD/../../../../OpenCV-4.5.4/opencv/build/include
+DEPENDPATH += $$PWD/../../../../OpenCV-4.5.4/opencv/build/include

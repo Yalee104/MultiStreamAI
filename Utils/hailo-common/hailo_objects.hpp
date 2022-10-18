@@ -497,7 +497,7 @@ public:
 
     //TODO: MSVC2019 will complain no default constructor (error C2512) for
     //      vector as HailoDetection (std::vector<HailoDetection> detection_list)
-    HailoDetection() : HailoROI(HailoBBox(0,0,0,0)) {};
+    //HailoDetection() : HailoROI(HailoBBox(0,0,0,0)) {};
 
     /**
      * @brief Construct a new New Hailo Detection object

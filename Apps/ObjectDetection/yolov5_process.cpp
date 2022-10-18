@@ -3,7 +3,15 @@
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetection> &detectionsResult);
+//TODO: Test Only
+#define TRACKER_USAGE_SAMPLE
+#ifdef TRACKER_USAGE_SAMPLE
+#include "hailo_tracker.hpp"
+#define HAILO_TRACKER_NAME  "TestTracker"
+std::vector<int> list_of_tracked_ids;
+#endif
+
+void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
 int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
@@ -29,6 +37,11 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     pInitData->NetworkInputSize = pInitData->NetworkInputHeight*pInitData->NetworkInputWidth*3; //RGB channel
 
     pHailoPipeline->GetNetworkQuantizationInfo(pInitData->ModelID, pInitData->QuantizationInfo);
+
+#ifdef TRACKER_USAGE_SAMPLE
+    HailoTracker::GetInstance().add_jde_tracker(HAILO_TRACKER_NAME);
+    HailoTracker::GetInstance().set_keep_past_metadata(HAILO_TRACKER_NAME, false);
+#endif
 
     return 0;
 }
@@ -78,7 +91,7 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
 
-    //QElapsedTimer timer;
+    QElapsedTimer timer;
 
     while (1) {
 
@@ -96,6 +109,30 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
             pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
             //qDebug() << "output readed at " << timer.nsecsElapsed();
 
+            std::vector<HailoDetectionPtr> MyTracker = HailoTracker::GetInstance().update(HAILO_TRACKER_NAME,pData->DecodedResult);
+
+#ifdef TRACKER_USAGE_SAMPLE
+            for (auto tracker : MyTracker) {
+                auto unique_ids = hailo_common::get_hailo_unique_id(tracker);
+                if (std::find(list_of_tracked_ids.begin(), list_of_tracked_ids.end(), unique_ids[0]->get_id()) != list_of_tracked_ids.end())
+                {
+                    // this track id was already updated
+                    continue;
+                }
+                else
+                {
+                    list_of_tracked_ids.emplace_back(unique_ids[0]->get_id());
+                    qDebug() << "New Tracked ID: " << unique_ids[0]->get_id();
+                    qDebug() << "Object Track Info";
+                    std::vector<HailoDetectionPtr> trackerObj {tracker};
+                    yolov5_print_output_result(pInfo, 1, trackerObj);
+
+                    //NOTE: this list will keep accumulating, during actual implementation need to clean up.
+                    qDebug() << "list id size: " << list_of_tracked_ids.size();
+                }
+            }
+
+#endif
             break;
         }
         else {
@@ -147,7 +184,6 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
 
-    static float32_t thr = 0.3;
     static bool Initialized = false;
     static Yolov5NmsDecoder<uint8_t> Yolov5Decoder(true);
     static std::vector<int> anchors1 {116, 90, 156, 198, 373, 326};
@@ -157,7 +193,7 @@ std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std
     if (Initialized == false) {
 
         QunatizationInfo quantInfo;
-        Yolov5Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, TOTAL_CLASS, thr);
+        Yolov5Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, TOTAL_CLASS, CONFIDENCE_THRS);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[0].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[0].qp_zp;

@@ -23,6 +23,7 @@ constexpr int FEATURE_MAP_SIZE1 = 20;
 constexpr int FEATURE_MAP_SIZE2 = 40;
 constexpr int FEATURE_MAP_SIZE3 = 80;
 constexpr int TOTAL_CLASS = 80;
+constexpr float CONFIDENCE_THRS = 0.5;
 
 struct ObjectDetectionInfo {
     std::string                 ModelID;
