@@ -1,19 +1,21 @@
-#include "yolov5_process.h"
+#include "yolov5_faceDet_process.h"
 
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void yolov5_person_face_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
-int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
+int Yolov5_PersonFace_Initialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     stNetworkModelInfo Network;
-    Network.id_name = "yolov5m";
-    Network.hef_path = "yolov5m.hef";
-    Network.output_order_by_name = std::vector<std::string>({"conv107", "conv97", "conv87"});
+    Network.id_name = "yolov5PersonFace";
+    Network.hef_path = "yolov5s_personface.hef";
+    Network.output_order_by_name = std::vector<std::string>({"yolov5s_personface/conv70",
+                                                             "yolov5s_personface/conv63",
+                                                             "yolov5s_personface/conv55"});
     Network.batch_size = 1;
     Network.in_quantized = false;
     Network.in_format = HAILO_FORMAT_TYPE_UINT8;
@@ -34,7 +36,7 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
 }
 
 
-void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -70,7 +72,7 @@ void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 }
 
 
-void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     //qDebug() << "Yolov5mReadOutput";
 
@@ -93,10 +95,8 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
             //timer.start();
 
-            pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
+            pData->DecodedResult = Yolov5PersonFaceDecode(pInfo, pInfo->OutputBufferUint8);
             //qDebug() << "output readed at " << timer.nsecsElapsed();
-
-            qDebug() << "decoded result: " << pData->DecodedResult.size();
 
             break;
         }
@@ -111,7 +111,7 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
 }
 
-void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
@@ -137,17 +137,18 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
                             pData->DecodedResult[k]->get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
+
     }
 
     qPainter.end();
 
-    //yolov5_print_output_result(pInfo, totalDetections, pData->DecodedResult);
+    //yolov5_person_face_print_output_result(pInfo, totalDetections, pData->DecodedResult);
 
 }
 
 
-std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
-    //qDebug() << "Yolov5mDecode";
+std::vector<HailoDetectionPtr> Yolov5PersonFaceDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+    //qDebug() << "Yolov5PersonFaceDecode";
 
     static bool Initialized = false;
     static Yolov5NmsDecoder<uint8_t> Yolov5Decoder(true);
@@ -158,19 +159,19 @@ std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std
     if (Initialized == false) {
 
         QunatizationInfo quantInfo;
-        Yolov5Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, TOTAL_CLASS, CONFIDENCE_THRS);
+        Yolov5Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, YOLO_PERSON_FACE_TOTAL_CLASS, YOLO_PERSON_FACE_CONFIDENCE_THRS);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[0].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[0].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE1, FEATURE_MAP_SIZE1, anchors1, &quantInfo);
+        Yolov5Decoder.YoloAddOutput(YOLO_PERSON_FACE_FEATURE_MAP_SIZE1, YOLO_PERSON_FACE_FEATURE_MAP_SIZE1, anchors1, &quantInfo);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[1].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[1].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE2, FEATURE_MAP_SIZE2, anchors2, &quantInfo);
+        Yolov5Decoder.YoloAddOutput(YOLO_PERSON_FACE_FEATURE_MAP_SIZE2, YOLO_PERSON_FACE_FEATURE_MAP_SIZE2, anchors2, &quantInfo);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[2].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[2].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE3, FEATURE_MAP_SIZE3, anchors3, &quantInfo);
+        Yolov5Decoder.YoloAddOutput(YOLO_PERSON_FACE_FEATURE_MAP_SIZE3, YOLO_PERSON_FACE_FEATURE_MAP_SIZE3, anchors3, &quantInfo);
 
         Initialized = true;
     }
@@ -179,96 +180,18 @@ std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std
 }
 
 
-std::string get_coco_name_from_int(int cls)
+std::string yolov5_person_face_get_classname(int cls)
 {
     std::string result = "N/A";
     switch(cls) {
         case 0: result = "__background__";break;
-        case 1: result = "person";break;
-        case 2: result = "bicycle";break;
-        case 3: result = "car";break;
-        case 4: result = "motorcycle";break;
-        case 5: result = "airplane";break;
-        case 6: result = "bus";break;
-        case 7: result = "train";break;
-        case 8: result = "truck";break;
-        case 9: result = "boat";break;
-        case 10: result = "traffic light";break;
-        case 11: result = "fire hydrant";break;
-        case 12: result = "stop sign";break;
-        case 13: result = "parking meter";break;
-        case 14: result = "bench";break;
-        case 15: result = "bird";break;
-        case 16: result = "cat";break;
-        case 17: result = "dog";break;
-        case 18: result = "horse";break;
-        case 19: result = "sheep";break;
-        case 20: result = "cow";break;
-        case 21: result = "elephant";break;
-        case 22: result = "bear";break;
-        case 23: result = "zebra";break;
-        case 24: result = "giraffe";break;
-        case 25: result = "backpack";break;
-        case 26: result = "umbrella";break;
-        case 27: result = "handbag";break;
-        case 28: result = "tie";break;
-        case 29: result = "suitcase";break;
-        case 30: result = "frisbee";break;
-        case 31: result = "skis";break;
-        case 32: result = "snowboard";break;
-        case 33: result = "sports ball";break;
-        case 34: result = "kite";break;
-        case 35: result = "baseball bat";break;
-        case 36: result = "baseball glove";break;;
-        case 37: result = "skateboard";break;
-        case 38: result = "surfboard";break;
-        case 39: result = "tennis racket";break;
-        case 40: result = "bottle";break;
-        case 41: result = "wine glass";break;
-        case 42: result = "cup";break;
-        case 43: result = "fork";break;
-        case 44: result = "knife";break;
-        case 45: result = "spoon";break;
-        case 46: result = "bowl";break;
-        case 47: result = "banana";break;
-        case 48: result = "apple";break;
-        case 49: result = "sandwich";break;
-        case 50: result = "orange";break;
-        case 51: result = "broccoli";break;
-        case 52: result = "carrot";break;
-        case 53: result = "hot dog";break;
-        case 54: result = "pizza";break;
-        case 55: result = "donut";break;
-        case 56: result = "cake";break;
-        case 57: result = "chair";break;
-        case 58: result = "couch";break;
-        case 59: result = "potted plant";break;
-        case 60: result = "bed";break;
-        case 61: result = "dining table";break;
-        case 62: result = "toilet";break;
-        case 63: result = "tv";break;
-        case 64: result = "laptop";break;
-        case 65: result = "mouse";break;
-        case 66: result = "remote";break;
-        case 67: result = "keyboard";break;
-        case 68: result = "cell phone";break;
-        case 69: result = "microwave";break;
-        case 70: result = "oven";break;
-        case 71: result = "toaster";break;
-        case 72: result = "sink";break;
-        case 73: result = "refrigerator";break;
-        case 74: result = "book";break;
-        case 75: result = "clock";break;
-        case 76: result = "vase";break;
-        case 77: result = "scissors";break;
-        case 78: result = "teddy bear";break;
-        case 79: result = "hair drier";break;
-        case 80: result = "toothbrush";break;
+        case YOLO_PERSONFACE_PERSON_CLASS_ID: result = "person";break;
+        case YOLO_PERSONFACE_FACE_CLASS_ID: result = "face";break;
     }
     return result;
 }
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void yolov5_person_face_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -276,7 +199,7 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
     if (total_detection > 0) {
         debug1 << "-I- Num detections: " << total_detection << " Classes: [";
         for (size_t i = 0; i < total_detection;i++)
-            debug1 << get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
+            debug1 << yolov5_person_face_get_classname(detectionsResult[i]->get_class_id()).data() << " ";
         debug1 << "]";
 
         //Show Detail Text Outputs
@@ -304,7 +227,7 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
 
 }
 
-int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData) {
+int Yolov5_PersonFace_ShareDataCleanUp(ObjectDetectionData* pShareData) {
     //qDebug() << "Yolov5mShareDataCleanUp";
 
     delete pShareData;

@@ -9,6 +9,9 @@ CONFIG += c++14
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    Apps/FaceRecognition/arcface_process.cpp \
+    Apps/FaceRecognition/faceRecognition.cpp \
+    Apps/FaceRecognition/yolov5_faceDet_process.cpp \
     Apps/ObjectDetection/objectdetection.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
@@ -24,8 +27,12 @@ SOURCES += \
 
 HEADERS += \
     Apps/AppsFactory.h \
+    Apps/FaceRecognition/arcface_process.h \
+    Apps/FaceRecognition/faceRecognition.h \
+    Apps/FaceRecognition/yolov5_faceDet_process.h \
     Apps/ObjectDetection/objectdetection.h \
     Apps/appbaseclass.h \
+    Apps/appcommon.h \
     Apps/appmanager.h \
     Apps/appsequencer.h \
     Utils/hailo-common/hailo_common.hpp \

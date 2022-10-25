@@ -23,7 +23,7 @@ void ObjectDetection::ImageInfer(const QImage &frame)
     QMutexLocker locker(&ResourceLock);
 
     if (bFrameInProcess) {
-        qDebug() << "exceeding limit, will drop frame " << mycount++;
+        //qDebug() << "exceeding limit, will drop frame " << mycount++;
         return;
     }
 

@@ -2,6 +2,7 @@
 #include <QDebug>
 #include "appmanager.h"
 #include "Apps/ObjectDetection/objectdetection.h"
+#include "Apps/FaceRecognition/faceRecognition.h"
 
 AppManager::AppManager(QObject *parent)
     : QObject{parent}
@@ -18,6 +19,13 @@ AppManager::AppManager(QObject *parent)
     pObjectDetection->setText(ObjectDetection::Name());
     pObjectDetection->setData(ClassName);
     m_pAppMenu->addAction(pObjectDetection);
+
+    //Register Apps: ObjectDetection
+    ClassName = m_AppsFactory.registerObject<FaceRecognition>();
+    QAction *pFaceRecognition = new QAction(m_pAppMenu);
+    pFaceRecognition->setText(FaceRecognition::Name());
+    pFaceRecognition->setData(ClassName);
+    m_pAppMenu->addAction(pFaceRecognition);
 
     //TODO: To add more Apps simply copy any of above register apps and make
     //      necessary changes to reflect the added app class
