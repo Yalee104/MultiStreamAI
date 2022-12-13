@@ -95,8 +95,7 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
             pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
             //qDebug() << "output readed at " << timer.nsecsElapsed();
-
-            qDebug() << "decoded result: " << pData->DecodedResult.size();
+            //qDebug() << "decoded result: " << pData->DecodedResult.size();
 
             break;
         }

@@ -4,6 +4,8 @@
 #include <QtConcurrent>
 #include <QDebug>
 
+#define APP_NAME    "Face Recognition"
+
 #define FACE_IMAGE_DB_PATH "FaceImageDb"
 
 /*
@@ -18,13 +20,48 @@
 FaceRecognition::FaceRecognition(QObject *parent)
     : AppBaseClass(parent)
 {
+    pSubMenu = new QMenu(APP_NAME);
 
     FrameCount = 0;
 }
 
-const QString FaceRecognition::Name()
+FaceRecognition::~FaceRecognition()
 {
-    return "Face Recognition";
+    delete pSubMenu;
+}
+
+
+const QString FaceRecognition::AppName()
+{
+    return APP_NAME;
+}
+
+const QString FaceRecognition::GetAppName()
+{
+    return APP_NAME;
+}
+
+
+bool FaceRecognition::AppContainSubMenu()
+{
+    return true;
+}
+
+
+QMenu* FaceRecognition::GetAppSubMenu()
+{
+    pSubMenu->clear();
+
+    pSubMenu->addAction("Reload Database", this, SLOT(ReloadFaceDatabase()));
+
+    return pSubMenu;
+}
+
+void FaceRecognition::ReloadFaceDatabase()
+{
+    //TODO: Here we reload the face database
+
+    qDebug() << "ReloadFaceDatabase";
 }
 
 void FaceRecognition::ImageInfer(const QImage &frame)
@@ -49,8 +86,8 @@ void FaceRecognition::run()
 
     QElapsedTimer timer;
     Timer   TimerFPS;
+    TimerMs TimerFPSLimit;
 
-    //TODO: Need a way to delete pObjDetInfo
     pObjDetInfo = new ObjectDetectionInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
     Yolov5_PersonFace_Initialize(pObjDetInfo, this->m_AppID.toStdString());
@@ -65,6 +102,8 @@ void FaceRecognition::run()
 
     TimerFPS.reset();
     while (!m_Terminate) {
+
+        TimerFPSLimit.reset();
 
         if (!m_pImageInferQueue->empty()){
 
@@ -107,6 +146,14 @@ void FaceRecognition::run()
 
             delete pData;
             bFrameInProcess = false;
+
+            //Limit FPS
+            if (this->m_LimitFPS != 0) {
+                double sleepfor = (1000.0f/this->m_LimitFPS) - TimerFPSLimit.getElapsedInMs();
+                if (sleepfor > 0.0f)
+                    QThread::currentThread()->msleep(sleepfor);
+            }
+
             FrameCount++;
 
             if (TimerFPS.isTimePastSec(2.0)) {
@@ -124,6 +171,6 @@ void FaceRecognition::run()
     delete pObjDetInfo;
     delete pArcFaceInfo;
 
-    qDebug() << "ObjectDetection::run exiting";
+    qDebug() << "FaceRecognition::run exiting";
 }
 

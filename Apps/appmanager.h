@@ -14,13 +14,17 @@ public:
     explicit AppManager(QObject *parent = nullptr);
     ~AppManager();
 
-    QMenu *getAppMenu() const;
+    QMenu *getAppMenu();
     bool  AppSelected();
 
     void  AppImageInfer(const QImage& frame);
 
+    void  AppLimitFPS(int FPS);
+
 private:
+    void  ReGenerateMenu();
     void  ReleaseCurrentApp();
+    void  ReleaseAppMenu();
 
 signals:
 

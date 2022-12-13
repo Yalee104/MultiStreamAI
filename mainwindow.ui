@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>844</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuView">
@@ -38,7 +38,18 @@
     </widget>
     <addaction name="menuAdd_View_2"/>
    </widget>
+   <widget class="QMenu" name="menuFPS">
+    <property name="title">
+     <string>FPS</string>
+    </property>
+    <addaction name="actionStreamFPS_Default"/>
+    <addaction name="actionStreamFPS_20"/>
+    <addaction name="actionStreamFPS_15"/>
+    <addaction name="actionStreamFPS_10"/>
+    <addaction name="actionStreamFPS_5"/>
+   </widget>
    <addaction name="menuView"/>
+   <addaction name="menuFPS"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionRemove_View">
@@ -59,6 +70,49 @@
   <action name="actionVideo">
    <property name="text">
     <string>Video</string>
+   </property>
+  </action>
+  <action name="actionStreamFPS_Default">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="accessories-calculator"/>
+   </property>
+   <property name="text">
+    <string>Default</string>
+   </property>
+  </action>
+  <action name="actionStreamFPS_15">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>15</string>
+   </property>
+  </action>
+  <action name="actionStreamFPS_10">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>10</string>
+   </property>
+  </action>
+  <action name="actionStreamFPS_5">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>5</string>
+   </property>
+  </action>
+  <action name="actionStreamFPS_20">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>20</string>
    </property>
   </action>
  </widget>

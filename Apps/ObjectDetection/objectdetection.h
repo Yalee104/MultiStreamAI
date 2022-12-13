@@ -13,7 +13,9 @@ class ObjectDetection : public AppBaseClass
     Q_OBJECT
 public:
     Q_INVOKABLE             ObjectDetection(QObject *parent = nullptr);
-    static const QString    Name();
+    ~ObjectDetection();
+    static const QString    AppName();
+    const QString           GetAppName() override;
 
 
     void ImageInfer(const QImage& frame) override;

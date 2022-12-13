@@ -17,6 +17,8 @@ public:
     CameraView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     ~CameraView();
 
+    void changeTargetFPS(int FPS) override;
+
     QString pixelFormatToString( QVideoFrame::PixelFormat pixelformatvalue );
 
 signals:

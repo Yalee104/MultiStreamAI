@@ -31,6 +31,13 @@ CameraView::~CameraView()
     ReleaseCamera();
 }
 
+void CameraView::changeTargetFPS(int FPS)
+{
+    m_AppManager.AppLimitFPS(FPS);
+    //qDebug() << "Camera FPS = " << FPS;
+
+}
+
 QString CameraView::pixelFormatToString(QVideoFrame::PixelFormat pixelformatvalue)
 {
     switch (pixelformatvalue) {

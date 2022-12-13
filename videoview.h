@@ -15,6 +15,8 @@ public:
     VideoView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     void loadSource(const QUrl &url);
 
+    void changeTargetFPS(int FPS) override;
+
 signals:
     Q_INVOKABLE void sendMouseEvent(QMouseEvent * e, QString ID);
 

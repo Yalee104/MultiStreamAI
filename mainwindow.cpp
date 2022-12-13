@@ -6,6 +6,9 @@
 #include <QCameraInfo>
 #include "videoview.h"
 
+#define STREAM_FPS_DEFAULT "Default"
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -16,6 +19,8 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *widget = new QWidget;
     widget->setLayout(&m_gridlayout);
 
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_DEFAULT);
+
     setCentralWidget(widget);
 
 }
@@ -24,6 +29,51 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+void MainWindow::SetGlobalStreamFPSMenu(eStreamFPS FPS)
+{
+    QString FPSstringSel = STREAM_FPS_DEFAULT;
+
+    switch (FPS) {
+    case eStreamFPS::FPS_20:
+        FPSstringSel = "20";
+        break;
+
+    case eStreamFPS::FPS_15:
+        FPSstringSel = "15";
+        break;
+
+    case eStreamFPS::FPS_10:
+        FPSstringSel = "10";
+        break;
+
+    case eStreamFPS::FPS_5:
+        FPSstringSel = "5";
+        break;
+
+    default:
+        break;
+    }
+
+    for (QAction* action : ui->menubar->actions()){
+        if (action->menu() && action->text().contains("FPS")) {
+            for (QAction* FPSaction : action->menu()->actions()){
+                //qDebug () << FPSaction->text();
+                if (FPSaction->text() == FPSstringSel) {
+                    FPSaction->setChecked(true);
+                    if (FPSstringSel == STREAM_FPS_DEFAULT)
+                        m_streamContainer.UpdateTargetFPSToAllStream(0);
+                    else
+                        m_streamContainer.UpdateTargetFPSToAllStream(FPSstringSel.toInt());
+                }
+                else {
+                    FPSaction->setChecked(false);
+                }
+            }
+        }
+    }
+}
+
 
 void MainWindow::PlacementStreamViewRefreshAll()
 {
@@ -69,6 +119,7 @@ void MainWindow::PlacementStreamViewAddNew(QString ID, eStreamViewType StreamTyp
         StreamView* pStreamView = m_streamContainer.CreateNewStream(ID, StreamType);
         connect(pStreamView, SIGNAL(stremViewWantsDeleteEvent(QString)), this, SLOT(PlacementStreamViewRemove(QString)));
         PlacementStreamViewRefreshAll();
+        m_streamContainer.UpdateTargetFPSToAllStream(m_GlobalTargetFPS);
     }
 }
 
@@ -121,4 +172,38 @@ void MainWindow::on_actionVideo_triggered()
     PlacementStreamViewAddNew(QString::number(m_uniqueID), eStreamViewType::VIDEO);
     m_uniqueID++;
 }
+
+
+void MainWindow::on_actionStreamFPS_Default_triggered()
+{
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_DEFAULT);
+    m_GlobalTargetFPS = 0;
+}
+
+void MainWindow::on_actionStreamFPS_20_triggered()
+{
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_20);
+    m_GlobalTargetFPS = 20;
+}
+
+void MainWindow::on_actionStreamFPS_15_triggered()
+{
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_15);
+    m_GlobalTargetFPS = 15;
+}
+
+
+void MainWindow::on_actionStreamFPS_10_triggered()
+{
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_10);
+    m_GlobalTargetFPS = 10;
+}
+
+
+void MainWindow::on_actionStreamFPS_5_triggered()
+{
+    SetGlobalStreamFPSMenu(eStreamFPS::FPS_5);
+    m_GlobalTargetFPS = 5;
+}
+
 

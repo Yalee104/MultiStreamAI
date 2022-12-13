@@ -18,6 +18,12 @@ public:
         return QByteArray(T::staticMetaObject.className());
    }
 
+   bool    isObjectRegistered(const QByteArray &type)
+   {
+       const QMetaObject *meta = metaObjects.value( type );
+       return meta ? true : false;
+   }
+
    QObject *createObject( const QByteArray &type )
    {
         const QMetaObject *meta = metaObjects.value( type );

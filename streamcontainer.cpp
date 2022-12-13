@@ -72,4 +72,12 @@ int StreamContainer::GetVisibleStreamViewCount()
     return count;
 }
 
+void  StreamContainer::UpdateTargetFPSToAllStream(int FPS)
+{
+    StreamView *pGetView = nullptr;
 
+    for (int i = 0; i < StreamList.size(); ++i) {
+        pGetView = StreamList.at(i);
+        pGetView->changeTargetFPS(FPS);
+    }
+}

@@ -14,11 +14,21 @@ class FaceRecognition : public AppBaseClass
     Q_OBJECT
 public:
     Q_INVOKABLE             FaceRecognition(QObject *parent = nullptr);
-    static const QString    Name();
+    ~FaceRecognition();
 
+    static const QString    AppName();
+    const QString           GetAppName() override;
+
+    bool AppContainSubMenu() override;
+    QMenu* GetAppSubMenu() override;
 
     void ImageInfer(const QImage& frame) override;
+
     void run() Q_DECL_OVERRIDE;
+
+public slots:
+
+    void ReloadFaceDatabase();
 
 signals:
 
@@ -26,6 +36,7 @@ signals:
 
 protected:
 
+    QMenu*                          pSubMenu = nullptr;
     ObjectDetectionInfo*            pObjDetInfo = nullptr;
     FaceRecognitionInfo*            pArcFaceInfo = nullptr;
     QMutex                          ResourceLock;

@@ -18,6 +18,7 @@ public:
     void          DeleteStream(QString ID);
     StreamView*   GetStreamViewByID(QString ID);
     int           GetVisibleStreamViewCount();
+    void          UpdateTargetFPSToAllStream(int FPS);
 
 signals:
     Q_INVOKABLE void ContainerViewUpdateRequest(QString ID, eStreamViewUpdate Request);

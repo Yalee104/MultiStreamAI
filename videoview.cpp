@@ -29,6 +29,12 @@ VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewS
     QObject::connect(&m_AppManager, SIGNAL(sendImage(QImage, QList<QGraphicsItem*>)), this, SLOT(UpdateImageToView(QImage,QList<QGraphicsItem*>)));
 }
 
+void VideoView::changeTargetFPS(int FPS)
+{
+    m_AppManager.AppLimitFPS(FPS);
+    //qDebug() << "Video FPS = " << FPS;
+}
+
 void VideoView::UpdateImageToView(const QImage &frame, const QList<QGraphicsItem*> &overlayItems)
 {
     if (overlayItems.size())

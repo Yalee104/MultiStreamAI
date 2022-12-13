@@ -12,6 +12,9 @@ class StreamView : public QGraphicsView
 public:
     explicit    StreamView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     ~StreamView();
+
+    virtual void        changeTargetFPS(int FPS) = 0;
+
     bool        getHidden() const;
     void        setHidden(bool newHidden);
     void        ClearMainImageGroupOverlay();

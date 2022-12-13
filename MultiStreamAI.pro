@@ -15,6 +15,7 @@ SOURCES += \
     Apps/ObjectDetection/objectdetection.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
+    Utils/database/FaceDatabase.cpp \
     Utils/tracking/hailo_tracker.cpp \
     cameraview.cpp \
     main.cpp \
@@ -35,6 +36,7 @@ HEADERS += \
     Apps/appcommon.h \
     Apps/appmanager.h \
     Apps/appsequencer.h \
+    Utils/database/FaceDatabase.hpp \
     Utils/hailo-common/hailo_common.hpp \
     Utils/hailo-common/hailo_objects.hpp \
     Utils/hailo-common/hailo_tensors.hpp \

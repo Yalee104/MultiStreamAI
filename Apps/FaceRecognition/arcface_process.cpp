@@ -1,5 +1,7 @@
 #include "arcface_process.h"
 #include "yolov5_faceDet_process.h"
+#include "Utils/database/FaceDatabase.hpp"
+
 #include <opencv2/opencv.hpp>
 
 #include <QThread>
@@ -23,25 +25,8 @@ std::vector<int> face_tracked_ids;
 #define FACE_TRACKER_IDENTIFIED     (1)
 #define FACE_TRACKER_UNIDENTIFIED   (2)
 
-std::vector<std::pair<std::string,std::vector<float32_t>>> gFacesDB;
+#define FACE_DB_GLOBAL  "Global"
 
-//http://mlwiki.org/index.php/Cosine_Similarity
-//https://www.machinelearningplus.com/nlp/cosine-similarity/
-float32_t cosine_similarity(std::vector<float32_t> a, std::vector<float32_t> b)
-{
-    size_t len = a.size();
-    float32_t dot = 0;
-    float32_t denom_a = 0;
-    float32_t denom_b = 0;
-    for (size_t i = 0; i < len; i++)
-    {
-        dot += a[i] * b[i];
-        denom_a += a[i] * a[i];
-        denom_b += b[i] * b[i];
-    }
-
-    return dot / (sqrt(denom_a) * sqrt(denom_b));
-}
 
 template <typename T>
 QImage paddedImage(const QImage & source, int targetWidth, int TargetHeight, T padValue)
@@ -159,7 +144,9 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
             TotalInfer--;
             int ImageDbIndex = InferedIndex.front();
 
-            gFacesDB.push_back(std::make_pair(fileInfoList[ImageDbIndex].baseName().toStdString(), pInitData->OutputBufferFloat32[0]));
+            FaceDatabase &FaceDb = FaceDatabase::GetInstance();
+
+            FaceDb.AddFace(FACE_DB_GLOBAL, fileInfoList[ImageDbIndex].baseName().toStdString(), pInitData->OutputBufferFloat32[0]);
 
             InferedIndex.pop_front();
         }
@@ -223,7 +210,7 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 
         }
         else {
-            qDebug() << "WARNING: Face DB image is not supported: " << fileInfo.absoluteFilePath();
+            qDebug() << "WARNING: Face DB image is not supported: " << QDir(TestImagePath).absoluteFilePath(ImageFileName);
         }
 #endif
 
@@ -234,29 +221,18 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 
                 if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                    //Here we compare the face database and identify the face.
-                    float32_t   best_score = 0.0f;
-                    size_t      best_match_index = -1;
-                    qDebug() << "Face DB size: " << gFacesDB.size();
-                    for (size_t k=0; k < gFacesDB.size(); k++)
-                    {
-                        float32_t score = cosine_similarity(pInitData->OutputBufferFloat32[0], gFacesDB[k].second);
+                    FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                        if (score > best_score){
-                            best_score = score;
-                            best_match_index = k;
-                            qDebug() << "Face Best = " << gFacesDB[k].first.c_str() << ", score = " << best_score;
-                        }
-                    }
-
-                    if (best_match_index >= 0 && best_score > 0.7)
+                    std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
+                    if (FaceName.empty())
                     {
-                        qDebug() << "Face Found = " << gFacesDB[best_match_index].first.c_str() << ", score = " << best_score;
+                        qDebug() << "Face Not Found";
                     }
                     else
                     {
-                        qDebug() << "Face Best but not reaching target score = " << gFacesDB[best_match_index].first.c_str() << ", score = " << best_score;
+                        qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                     }
+
 
                     break;
                 }
@@ -302,28 +278,16 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 
                 if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                    //Here we compare the face database and identify the face.
-                    float32_t   best_score = 0.0f;
-                    size_t      best_match_index = -1;
-                    qDebug() << "Face DB size: " << gFacesDB.size();
-                    for (size_t k=0; k < gFacesDB.size(); k++)
-                    {
-                        float32_t score = cosine_similarity(pInitData->OutputBufferFloat32[0], gFacesDB[k].second);
+                    FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                        if (score > best_score){
-                            best_score = score;
-                            best_match_index = k;
-                            qDebug() << "Face Best = " << gFacesDB[k].first.c_str() << ", score = " << best_score;
-                        }
-                    }
-
-                    if (best_match_index >= 0 && best_score > 0.7)
+                    std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
+                    if (FaceName.empty())
                     {
-                        qDebug() << "Face Found = " << gFacesDB[best_match_index].first.c_str() << ", score = " << best_score;
+                        qDebug() << "Face Not Found";
                     }
                     else
                     {
-                        qDebug() << "Face Best but not reaching target score = " << gFacesDB[best_match_index].first.c_str() << ", score = " << best_score;
+                        qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                     }
 
                     break;
@@ -523,31 +487,19 @@ void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionDat
 
                     if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                        //Here we compare the face database and identify the face.
-                        float32_t   best_score = 0.0f;
-                        int         best_match_index = -1;
-                        //qDebug() << "Face DB size: " << gFacesDB.size();
-                        for (size_t k=0; k < gFacesDB.size(); k++)
-                        {
-                            float32_t score = cosine_similarity(pFaceInfo->OutputBufferFloat32[0], gFacesDB[k].second);
+                        FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                            if (score > best_score){
-                                best_score = score;
-                                best_match_index = k;
-                                //qDebug() << "Face Best = " << gFacesDB[k].first.c_str() << ", score = " << best_score;
-                            }
-                        }
-
-                        if (best_match_index >= 0 && best_score > 0.4)
+                        std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pFaceInfo->OutputBufferFloat32[0], 0.5);
+                        if (FaceName.empty())
                         {
-                            //qDebug() << "Face Found = " << gFacesDB[best_match_index].first.c_str() << ", score = " << best_score;
-                            UserMetaPtr->set_user_string(gFacesDB[best_match_index].first);
-                            UserMetaPtr->set_user_int(FACE_TRACKER_IDENTIFIED);
+                            //qDebug() << "Face Not Found";
+                            UserMetaPtr->set_user_int(FACE_TRACKER_UNIDENTIFIED);
                         }
                         else
                         {
-                            //Warning: Do not use best_match_index here as its -1
-                            UserMetaPtr->set_user_int(FACE_TRACKER_UNIDENTIFIED);
+                            UserMetaPtr->set_user_string(FaceName);
+                            UserMetaPtr->set_user_int(FACE_TRACKER_IDENTIFIED);
+                            //qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                         }
 
 
@@ -555,6 +507,7 @@ void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionDat
                     }
                     else {
                         if (TimerCheck.isTimePastSec(2.0)) {
+                            qDebug() << "Get face recognition output timeout!!!";
                             break;
                         }
 

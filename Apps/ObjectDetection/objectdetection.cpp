@@ -4,6 +4,7 @@
 #include <QtConcurrent>
 #include <QDebug>
 
+#define APP_NAME    "Object Detection"
 
 ObjectDetection::ObjectDetection(QObject *parent)
     : AppBaseClass(parent)
@@ -12,10 +13,21 @@ ObjectDetection::ObjectDetection(QObject *parent)
     FrameCount = 0;
 }
 
-const QString ObjectDetection::Name()
+ObjectDetection::~ObjectDetection()
 {
-    return "Object Detection";
+    //qDebug() << "~ObjectDetection()";
 }
+
+const QString ObjectDetection::AppName()
+{
+    return APP_NAME;
+}
+
+const QString ObjectDetection::GetAppName()
+{
+    return APP_NAME;
+}
+
 
 void ObjectDetection::ImageInfer(const QImage &frame)
 {
@@ -39,14 +51,16 @@ void ObjectDetection::run()
 
     QElapsedTimer timer;
     Timer   TimerFPS;
+    TimerMs TimerFPSLimit;
 
-    //TODO: Need a way to delete pObjDetInfo
     pObjDetInfo = new ObjectDetectionInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
     Yolov5mInitialize(pObjDetInfo, this->m_AppID.toStdString());
 
     TimerFPS.reset();
     while (!m_Terminate) {
+
+        TimerFPSLimit.reset();
 
         if (!m_pImageInferQueue->empty()){
 
@@ -81,7 +95,17 @@ void ObjectDetection::run()
 
 
             delete pData;
+
+            //Send the signal we are done first before we sleep to limt the FPS.
             bFrameInProcess = false;
+
+            //Limit FPS
+            if (this->m_LimitFPS != 0) {
+                double sleepfor = (1000.0f/this->m_LimitFPS) - TimerFPSLimit.getElapsedInMs();
+                if (sleepfor > 0.0f)
+                    QThread::currentThread()->msleep(sleepfor);
+            }
+
             FrameCount++;
 
             if (TimerFPS.isTimePastSec(2.0)) {
@@ -96,6 +120,7 @@ void ObjectDetection::run()
     }
 
     delete m_pImageInferQueue;
+    delete pObjDetInfo;
     qDebug() << "ObjectDetection::run exiting";
 }
 

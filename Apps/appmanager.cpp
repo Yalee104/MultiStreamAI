@@ -9,6 +9,23 @@ AppManager::AppManager(QObject *parent)
 {
     m_pAppMenu = new QMenu("Apps");
 
+    //Connect selection execution
+    connect(m_pAppMenu, SIGNAL(triggered(QAction*)), this, SLOT(AppSelectionTrigger(QAction*)));
+}
+
+AppManager::~AppManager()
+{
+    QMutexLocker locker(&m_AppAccessMutex);
+
+    ReleaseCurrentApp();
+    ReleaseAppMenu();
+
+}
+
+void AppManager::ReGenerateMenu()
+{
+    m_pAppMenu->clear();
+
     /*
      * ALL new apps must register here to AppMenu
     */
@@ -16,32 +33,60 @@ AppManager::AppManager(QObject *parent)
     //Register Apps: ObjectDetection
     QByteArray ClassName = m_AppsFactory.registerObject<ObjectDetection>();
     QAction *pObjectDetection = new QAction(m_pAppMenu);
-    pObjectDetection->setText(ObjectDetection::Name());
+    pObjectDetection->setText(ObjectDetection::AppName());
     pObjectDetection->setData(ClassName);
     m_pAppMenu->addAction(pObjectDetection);
 
-    //Register Apps: ObjectDetection
+    //Register Apps: Face Recognition
     ClassName = m_AppsFactory.registerObject<FaceRecognition>();
     QAction *pFaceRecognition = new QAction(m_pAppMenu);
-    pFaceRecognition->setText(FaceRecognition::Name());
+    pFaceRecognition->setText(FaceRecognition::AppName());
     pFaceRecognition->setData(ClassName);
     m_pAppMenu->addAction(pFaceRecognition);
 
-    //TODO: To add more Apps simply copy any of above register apps and make
-    //      necessary changes to reflect the added app class
+    //To add more Apps simply copy any of above register apps and make
+    //necessary changes to reflect the added app class
+    //TODO: ADD HERE
 
 
-    //Connect selection execution
-    connect(m_pAppMenu, SIGNAL(triggered(QAction*)), this, SLOT(AppSelectionTrigger(QAction*)));
+
+
+    //Auto replace the app submenu (if any) for current app (if already created)
+    QList<QAction*> ActionList = m_pAppMenu->actions();
+    for (QAction* menuAction : ActionList) {
+        if (m_pAppRunnableObject) {
+            if (menuAction->text().compare(m_pAppRunnableObject->GetAppName()) == 0) {
+                if (m_pAppRunnableObject->AppContainSubMenu()) {
+
+                    m_pAppMenu->removeAction(menuAction);
+                    m_pAppMenu->addMenu(m_pAppRunnableObject->GetAppSubMenu());
+                    break;
+                }
+            }
+        }
+    }
 }
 
-AppManager::~AppManager()
+void AppManager::ReleaseCurrentApp()
 {
-    ReleaseCurrentApp();
+    if (m_pAppRunnableObject) {
+        m_pAppRunnableObject->setTerminate(true);
+        //NOTE: m_pAppRunnableObject will self destroy after runnable.
+    }
 }
 
-QMenu *AppManager::getAppMenu() const
+void AppManager::ReleaseAppMenu()
 {
+    if (m_pAppMenu) {
+        delete m_pAppMenu;
+        m_pAppMenu = nullptr;
+    }
+}
+
+
+QMenu *AppManager::getAppMenu()
+{
+    ReGenerateMenu();
     return m_pAppMenu;
 }
 
@@ -53,6 +98,14 @@ bool AppManager::AppSelected()
     return false;
 }
 
+void  AppManager::AppLimitFPS(int FPS)
+{
+    if (m_pAppRunnableObject != nullptr){
+        m_pAppRunnableObject->m_LimitFPS = FPS;
+    }
+
+}
+
 void AppManager::AppImageInfer(const QImage &frame)
 {
     QMutexLocker locker(&m_AppAccessMutex);
@@ -61,16 +114,24 @@ void AppManager::AppImageInfer(const QImage &frame)
         m_pAppRunnableObject->ImageInfer(frame);
 }
 
-void AppManager::ReleaseCurrentApp()
-{
-    if (m_pAppRunnableObject) {
-        m_pAppRunnableObject->setTerminate(true);
-    }
-}
-
 void AppManager::AppSelectionTrigger(QAction *action)
 {
     QMutexLocker locker(&m_AppAccessMutex);
+
+    //If data is null we ignore as this is provably app submenu
+    if (action->data().isNull())
+        return;
+
+    //If data exist but its not registered then we won't be able to create the app, ignore it as its most likely app submenu
+    if (!m_AppsFactory.isObjectRegistered(action->data().toByteArray()))
+        return;
+
+    //If selected app is already current created app, we skip.
+    if (m_pAppRunnableObject) {
+        if (action->text().compare(m_pAppRunnableObject->GetAppName()) == 0) {
+            return;
+        }
+    }
 
     ReleaseCurrentApp();
 

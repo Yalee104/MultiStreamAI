@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QRunnable>
 #include <QThreadPool>
+#include <QMenu>
 
 class AppBaseClass : public QObject, public QRunnable
 {
@@ -14,7 +15,10 @@ public:
     explicit    AppBaseClass(QObject *parent = nullptr);
     ~AppBaseClass();
 
-    virtual     void    ImageInfer(const QImage& frame) = 0;
+    virtual     const QString   GetAppName() = 0;
+    virtual     bool            AppContainSubMenu();
+    virtual     QMenu*          GetAppSubMenu();
+    virtual     void            ImageInfer(const QImage& frame) = 0;
 
 signals:
 
@@ -29,6 +33,7 @@ public:
 
 public:
     QString         m_AppID;
+    int             m_LimitFPS = 0; //0 as default depending on stream FPS
 
 protected:
     bool            m_Terminate = false;
