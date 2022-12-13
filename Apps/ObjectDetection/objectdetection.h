@@ -5,7 +5,6 @@
 #include <QMutex>
 #include <QQueue>
 #include "Apps/appbaseclass.h"
-#include "Apps/appsequencer.h"
 #include "Apps/ObjectDetection/yolov5_process.h"
 
 class ObjectDetection : public AppBaseClass

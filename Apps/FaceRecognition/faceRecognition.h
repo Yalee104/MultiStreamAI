@@ -5,7 +5,6 @@
 #include <QMutex>
 #include <QQueue>
 #include "Apps/appbaseclass.h"
-#include "Apps/appsequencer.h"
 #include "Apps/FaceRecognition/yolov5_faceDet_process.h"
 #include "Apps/FaceRecognition/arcface_process.h"
 

@@ -35,7 +35,7 @@ HEADERS += \
     Apps/appbaseclass.h \
     Apps/appcommon.h \
     Apps/appmanager.h \
-    Apps/appsequencer.h \
+    #Apps/appsequencer.h \
     Utils/database/FaceDatabase.hpp \
     Utils/hailo-common/hailo_common.hpp \
     Utils/hailo-common/hailo_objects.hpp \
