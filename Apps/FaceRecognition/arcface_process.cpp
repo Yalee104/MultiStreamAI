@@ -110,7 +110,7 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
 #else //Use native QT QImage but with less performance although best for cross platform compatibility
 
         QImage scaledImage = QImage(fileInfo.absoluteFilePath()).scaled(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::KeepAspectRatio);
-        scaledImage.convertTo(QImage::Format_RGB888);
+        scaledImage.convertToFormat(QImage::Format_RGB888);
 
         if (!scaledImage.isNull()) {
 
@@ -196,7 +196,7 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 
         if (!scaledImage.isNull()) {
 
-            scaledImage.convertTo(QImage::Format_RGB888);
+            scaledImage.convertToFormat(QImage::Format_RGB888);
 
             auto padded = paddedImage(scaledImage, pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::gray);
             //padded.save("SavedImage_Test.jpg");
@@ -440,7 +440,7 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
                        tracker->get_bbox().height()*heightScale);
             QImage cropped = pDetectionData->VisualizedImage.copy(rect);
             QImage scaledImage = cropped.scaled(pFaceInfo->NetworkInputWidth, pFaceInfo->NetworkInputHeight, Qt::KeepAspectRatio);
-            scaledImage.convertTo(QImage::Format_RGB888);
+            scaledImage.convertToFormat(QImage::Format_RGB888);
 
             QImage padded = paddedImage(scaledImage, pFaceInfo->NetworkInputWidth, pFaceInfo->NetworkInputHeight, Qt::gray);
             //padded.save("SavedImage_Infer.jpg");
