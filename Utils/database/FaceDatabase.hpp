@@ -2,6 +2,7 @@
 
 #include <map>
 #include <algorithm>
+#include <math.h>
 #include <memory>
 #include <stdexcept>
 #include <string>
