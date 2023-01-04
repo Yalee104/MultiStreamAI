@@ -5,6 +5,7 @@
 #include <QMenu>
 #include <QCameraInfo>
 #include "videoview.h"
+#include "Apps/appcommon.h"
 
 #define STREAM_FPS_DEFAULT "Default"
 
@@ -27,6 +28,9 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
+    pHailoPipeline->ReleaseAllResource();
+
     delete ui;
 }
 

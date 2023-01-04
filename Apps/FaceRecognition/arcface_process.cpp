@@ -77,7 +77,6 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
 
-    int TotalInfer = 0;
     QList<int> InferedIndex;
     QStringList filters;
     filters << "*.png" << "*.jpg" << "*.jpeg";
@@ -99,7 +98,6 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
             pInitData->ImageInputRaw.assign(out_frame.datastart, out_frame.datastart+totalsz);
 
             pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
-            TotalInfer++;
 
             InferedIndex.push_back(i);
         }
@@ -132,8 +130,8 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
 #endif
     }
 
-    while (TotalInfer)
-    {
+    while (InferedIndex.count()) {
+
         if (pInitData->OutputFormat == HAILO_FORMAT_TYPE_UINT8)
             ReadOutRet = pHailoPipeline->ReadOutputById(pInitData->ModelID, pInitData->OutputBufferUint8, pInitData->AppID);
         else //Must be float 32
@@ -141,22 +139,14 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
 
         if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-            TotalInfer--;
             int ImageDbIndex = InferedIndex.front();
 
             FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
             FaceDb.AddFace(FACE_DB_GLOBAL, fileInfoList[ImageDbIndex].baseName().toStdString(), pInitData->OutputBufferFloat32[0]);
-
-            InferedIndex.pop_front();
         }
-        else {
-            if (TimerCheck.isTimePastSec(2.0)) {
-                break;
-            }
 
-            QThread::currentThread()->usleep(100);
-        }
+        InferedIndex.pop_front();
     }
 }
 
@@ -174,67 +164,61 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 
 #ifdef OPENCV_RESIZE
 
-        cv::Mat out_frame;
-        cv::Mat org_frame = cv::imread(QDir(TestImagePath).absoluteFilePath(ImageFileName).toStdString());
+            cv::Mat out_frame;
+            cv::Mat org_frame = cv::imread(QDir(TestImagePath).absoluteFilePath(ImageFileName).toStdString());
 
-        if (!org_frame.empty()) {
-            cv::cvtColor(org_frame, org_frame, cv::COLOR_BGR2RGB);
-            out_frame = ResizeAspectRatioFit( org_frame, 112, 112);
+            if (!org_frame.empty()) {
+                cv::cvtColor(org_frame, org_frame, cv::COLOR_BGR2RGB);
+                out_frame = ResizeAspectRatioFit( org_frame, 112, 112);
 
-            int totalsz = out_frame.dataend - out_frame.datastart;
-            pInitData->ImageInputRaw.assign(out_frame.datastart, out_frame.datastart+totalsz);
+                int totalsz = out_frame.dataend - out_frame.datastart;
+                pInitData->ImageInputRaw.assign(out_frame.datastart, out_frame.datastart+totalsz);
 
-            pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
-        }
-        else {
-            qDebug() << "WARNING: Face DB image is not supported: " << QDir(TestImagePath).absoluteFilePath(ImageFileName);
-        }
+                pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
+
+            }
+            else {
+                qDebug() << "WARNING: Face DB image is not supported: " << QDir(TestImagePath).absoluteFilePath(ImageFileName);
+            }
 
 #else //Use native QT QImage but with less performance although best for cross platform compatibility
 
-        QImage scaledImage = QImage(QDir(TestImagePath).absoluteFilePath(ImageFileName)).scaled(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::KeepAspectRatio);
+            QImage scaledImage = QImage(QDir(TestImagePath).absoluteFilePath(ImageFileName)).scaled(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::KeepAspectRatio);
 
-        if (!scaledImage.isNull()) {
+            if (!scaledImage.isNull()) {
 
-            scaledImage.convertToFormat(QImage::Format_RGB888);
+                scaledImage.convertToFormat(QImage::Format_RGB888);
 
-            auto padded = paddedImage(scaledImage, pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::gray);
-            //padded.save("SavedImage_Test.jpg");
-            const uchar* pImagedata = padded.bits();
+                auto padded = paddedImage(scaledImage, pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::gray);
+                //padded.save("SavedImage_Test.jpg");
+                const uchar* pImagedata = padded.bits();
 
-            pInitData->ImageInputRaw.assign(pImagedata, pImagedata+padded.sizeInBytes());
+                pInitData->ImageInputRaw.assign(pImagedata, pImagedata+padded.sizeInBytes());
 
-            qDebug() << "output readed at " << timer.nsecsElapsed();
+                qDebug() << "output readed at " << timer.nsecsElapsed();
 
-            pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
+                pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
 
-        }
-        else {
-            qDebug() << "WARNING: Face DB image is not supported: " << QDir(TestImagePath).absoluteFilePath(ImageFileName);
-        }
+            }
+            else {
+                qDebug() << "WARNING: Face DB image is not supported: " << QDir(TestImagePath).absoluteFilePath(ImageFileName);
+            }
 #endif
 
+            ReadOutRet = pHailoPipeline->ReadOutputById(pInitData->ModelID, pInitData->OutputBufferFloat32, pInitData->AppID);
 
-            while(1) {
+            if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                ReadOutRet = pHailoPipeline->ReadOutputById(pInitData->ModelID, pInitData->OutputBufferFloat32, pInitData->AppID);
+                FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                if (ReadOutRet == MnpReturnCode::SUCCESS) {
-
-                    FaceDatabase &FaceDb = FaceDatabase::GetInstance();
-
-                    std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
-                    if (FaceName.empty())
-                    {
-                        qDebug() << "Face Not Found";
-                    }
-                    else
-                    {
-                        qDebug() << "Face Best = " << QString::fromStdString(FaceName);
-                    }
-
-
-                    break;
+                std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
+                if (FaceName.empty())
+                {
+                    qDebug() << "Face Not Found";
+                }
+                else
+                {
+                    qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                 }
             }
         }
@@ -272,25 +256,20 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
             pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
 
 
-            while(1) {
+            ReadOutRet = pHailoPipeline->ReadOutputById(pInitData->ModelID, pInitData->OutputBufferFloat32, pInitData->AppID);
 
-                ReadOutRet = pHailoPipeline->ReadOutputById(pInitData->ModelID, pInitData->OutputBufferFloat32, pInitData->AppID);
+            if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                if (ReadOutRet == MnpReturnCode::SUCCESS) {
+                FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                    FaceDatabase &FaceDb = FaceDatabase::GetInstance();
-
-                    std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
-                    if (FaceName.empty())
-                    {
-                        qDebug() << "Face Not Found";
-                    }
-                    else
-                    {
-                        qDebug() << "Face Best = " << QString::fromStdString(FaceName);
-                    }
-
-                    break;
+                std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pInitData->OutputBufferFloat32[0], 0.5);
+                if (FaceName.empty())
+                {
+                    qDebug() << "Face Not Found";
+                }
+                else
+                {
+                    qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                 }
             }
         }
@@ -320,7 +299,7 @@ int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID) {
     Network.in_format = HAILO_FORMAT_TYPE_UINT8;
     Network.out_quantized = false;
     Network.out_format = HAILO_FORMAT_TYPE_FLOAT32;
-    pHailoPipeline->AddNetwork(0, Network);
+    pHailoPipeline->AddNetwork(0, Network, AppID);
 
     pFaceInfo->ModelID = Network.id_name;
     pFaceInfo->AppID = AppID;
@@ -330,6 +309,9 @@ int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID) {
     pFaceInfo->NetworkInputSize = pFaceInfo->NetworkInputHeight*pFaceInfo->NetworkInputWidth*3; //RGB channel
 
     pHailoPipeline->GetNetworkQuantizationInfo(pFaceInfo->ModelID, pFaceInfo->QuantizationInfo);
+
+    pHailoPipeline->InitializeOutputBuffer<float32_t>(pFaceInfo->ModelID, pFaceInfo->OutputBufferFloat32, AppID);
+
 
 #ifdef TRACKER_USE
     HailoTracker::GetInstance().add_jde_tracker(pFaceInfo->AppID);
@@ -451,6 +433,7 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
             //pFaceInfo->ImageInputRaw.resize(pFaceInfo->NetworkInputSize, 0);
 
             pHailoPipeline->Infer(pFaceInfo->ModelID, pFaceInfo->ImageInputRaw, pFaceInfo->AppID);
+
         }
     }
 
@@ -480,38 +463,23 @@ void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionDat
             HailoUserMetaPtr UserMetaPtr = std::dynamic_pointer_cast<HailoUserMeta>(ObjPtr[0]);
             if (UserMetaPtr->get_user_int() == FACE_TRACKER_NEED_PREDICT) {
 
-                TimerCheck.reset();
-                while(1) {
+                ReadOutRet = pHailoPipeline->ReadOutputById(pFaceInfo->ModelID, pFaceInfo->OutputBufferFloat32, pFaceInfo->AppID);
 
-                    ReadOutRet = pHailoPipeline->ReadOutputById(pFaceInfo->ModelID, pFaceInfo->OutputBufferFloat32, pFaceInfo->AppID);
+                if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-                    if (ReadOutRet == MnpReturnCode::SUCCESS) {
+                    FaceDatabase &FaceDb = FaceDatabase::GetInstance();
 
-                        FaceDatabase &FaceDb = FaceDatabase::GetInstance();
-
-                        std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pFaceInfo->OutputBufferFloat32[0], 0.5);
-                        if (FaceName.empty())
-                        {
-                            //qDebug() << "Face Not Found";
-                            UserMetaPtr->set_user_int(FACE_TRACKER_UNIDENTIFIED);
-                        }
-                        else
-                        {
-                            UserMetaPtr->set_user_string(FaceName);
-                            UserMetaPtr->set_user_int(FACE_TRACKER_IDENTIFIED);
-                            //qDebug() << "Face Best = " << QString::fromStdString(FaceName);
-                        }
-
-
-                        break;
+                    std::string FaceName = FaceDb.FindBestMatch(FACE_DB_GLOBAL, pFaceInfo->OutputBufferFloat32[0], 0.5);
+                    if (FaceName.empty())
+                    {
+                        //qDebug() << "Face Not Found";
+                        UserMetaPtr->set_user_int(FACE_TRACKER_UNIDENTIFIED);
                     }
-                    else {
-                        if (TimerCheck.isTimePastSec(2.0)) {
-                            qDebug() << "Get face recognition output timeout!!!";
-                            break;
-                        }
-
-                        QThread::currentThread()->usleep(100);
+                    else
+                    {
+                        UserMetaPtr->set_user_string(FaceName);
+                        UserMetaPtr->set_user_int(FACE_TRACKER_IDENTIFIED);
+                        //qDebug() << "Face Best = " << QString::fromStdString(FaceName);
                     }
                 }
             }

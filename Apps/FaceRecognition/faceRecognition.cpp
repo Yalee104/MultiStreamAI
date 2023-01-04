@@ -100,6 +100,7 @@ void FaceRecognition::run()
     //Arcface_Test("FaceImageTest", "Aaron.jpg", pArcFaceInfo);
     //Arcface_Test("FaceImageTest", "letter_boxed_aaron.jpg", pArcFaceInfo);
 
+
     TimerFPS.reset();
     while (!m_Terminate) {
 
@@ -111,9 +112,11 @@ void FaceRecognition::run()
 
             ResourceLock.lock();
 
+
             ObjectDetectionData* pData = new ObjectDetectionData();
             pData->VisualizedImage = m_pImageInferQueue->front().copy();
             m_pImageInferQueue->pop_front();
+
 
             ResourceLock.unlock();
 
@@ -121,13 +124,16 @@ void FaceRecognition::run()
 
             Yolov5_PersonFace_InferWorker(pObjDetInfo, pData);
 
+
             //qDebug() << "2 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
             Yolov5_PersonFace_ReadOutputWorker(pObjDetInfo, pData);
 
+
             //qDebug() << "3 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
             ArcFace_InferWorker(pArcFaceInfo, pObjDetInfo, pData);
+
 
             //qDebug() << "4 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
@@ -137,10 +143,12 @@ void FaceRecognition::run()
 
             ArcFace_VisualizeWorker(pObjDetInfo, pData);
 
+
             //qDebug() << "6 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
             QImage FinalImage = pData->VisualizedImage;
             emit sendAppResultImage(FinalImage, QList<QGraphicsItem*>());
+
 
             //qDebug() << "6 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
@@ -161,15 +169,21 @@ void FaceRecognition::run()
                 TimerFPS.reset();
                 FrameCount = 0;
             }
+
         }
         else {
             QThread::currentThread()->usleep(100);
         }
     }
 
+    MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
+    pHailoPipeline->ReleaseStreamChannel(0, pArcFaceInfo->AppID);
+
     delete m_pImageInferQueue;
     delete pObjDetInfo;
     delete pArcFaceInfo;
+
+
 
     qDebug() << "FaceRecognition::run exiting";
 }

@@ -119,6 +119,9 @@ void ObjectDetection::run()
         }
     }
 
+    MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
+    pHailoPipeline->ReleaseStreamChannel(0, pObjDetInfo->AppID);
+
     delete m_pImageInferQueue;
     delete pObjDetInfo;
     qDebug() << "ObjectDetection::run exiting";

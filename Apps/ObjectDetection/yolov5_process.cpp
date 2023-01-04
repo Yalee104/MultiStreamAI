@@ -19,7 +19,7 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     Network.in_format = HAILO_FORMAT_TYPE_UINT8;
     Network.out_quantized = true;
     Network.out_format = HAILO_FORMAT_TYPE_UINT8;
-    pHailoPipeline->AddNetwork(0, Network);
+    pHailoPipeline->AddNetwork(0, Network, AppID);
 
     pInitData->ModelID = Network.id_name;
     pInitData->AppID = AppID;
@@ -29,6 +29,8 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     pInitData->NetworkInputSize = pInitData->NetworkInputHeight*pInitData->NetworkInputWidth*3; //RGB channel
 
     pHailoPipeline->GetNetworkQuantizationInfo(pInitData->ModelID, pInitData->QuantizationInfo);
+
+    pHailoPipeline->InitializeOutputBuffer<uint8_t>(pInitData->ModelID, pInitData->OutputBufferUint8, AppID);
 
     return 0;
 }
@@ -80,34 +82,19 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     QElapsedTimer timer;
 
-    while (1) {
+    if (pInfo->OutputFormat == HAILO_FORMAT_TYPE_UINT8)
+        ReadOutRet = pHailoPipeline->ReadOutputById(pInfo->ModelID, pInfo->OutputBufferUint8, pInfo->AppID);
+    else //Must be float 32
+        qDebug() << "WARNING: Output HAILO_FORMAT_TYPE_FLOAT32 NOT YET SUPPORTED";
 
-        //OutputBufferUint8.clear();
+    if (ReadOutRet == MnpReturnCode::SUCCESS) {
 
-        if (pInfo->OutputFormat == HAILO_FORMAT_TYPE_UINT8)
-            ReadOutRet = pHailoPipeline->ReadOutputById(pInfo->ModelID, pInfo->OutputBufferUint8, pInfo->AppID);
-        else //Must be float 32
-            qDebug() << "WARNING: Output HAILO_FORMAT_TYPE_FLOAT32 NOT YET SUPPORTED";
+        //timer.start();
 
-        if (ReadOutRet == MnpReturnCode::SUCCESS) {
-
-            //timer.start();
-
-            pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
-            //qDebug() << "output readed at " << timer.nsecsElapsed();
-            //qDebug() << "decoded result: " << pData->DecodedResult.size();
-
-            break;
-        }
-        else {
-            if (TimerCheck.isTimePastSec(2.0)) {
-                break;
-            }
-
-            QThread::currentThread()->usleep(100);
-        }
+        pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
+        //qDebug() << "output readed at " << timer.nsecsElapsed();
+        //qDebug() << "decoded result: " << pData->DecodedResult.size();
     }
-
 }
 
 void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {

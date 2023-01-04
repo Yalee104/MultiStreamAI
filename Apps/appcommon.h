@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string>
 #include <hailo/hailort.h>
-#include "MultiNetworkPipeline.hpp"
+#include "MultiNetworkPipeline-scheduler.hpp"
 #include "Utils/hailo-common/hailo_common.hpp"
 
 #include <QImage>

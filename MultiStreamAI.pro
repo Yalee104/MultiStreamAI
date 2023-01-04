@@ -78,16 +78,16 @@ else: unix:!android: target.path = /home/jetsoon/Desktop
 !isEmpty(target.path): INSTALLS += target
 
 # Linux MultiNetworkPipeline
-unix:!macx: LIBS += -L$$PWD/MultiNetworkPipeline/ -lMultiNetworkPipeline
-INCLUDEPATH += $$PWD/MultiNetworkPipeline
-DEPENDPATH += $$PWD/MultiNetworkPipeline
-unix:!macx: PRE_TARGETDEPS += $$PWD/MultiNetworkPipeline/libMultiNetworkPipeline.a
+unix:!macx: LIBS += -L$$PWD/MultiNetworkPipeline-Scheduler/ -lMultiNetworkPipeline
+INCLUDEPATH += $$PWD/MultiNetworkPipeline-Scheduler
+DEPENDPATH += $$PWD/MultiNetworkPipeline-Scheduler
+unix:!macx: PRE_TARGETDEPS += $$PWD/MultiNetworkPipeline-Scheduler/libMultiNetworkPipeline.a
 
 # Windows MultiNetworkPipeline
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/release/ -lMultiNetworkPipeline
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline/debug/ -lMultiNetworkPipeline
-INCLUDEPATH += $$PWD/MultiNetworkPipeline
-DEPENDPATH += $$PWD/MultiNetworkPipeline
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline-Scheduler/release/ -lMultiNetworkPipeline
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/MultiNetworkPipeline-Scheduler/debug/ -lMultiNetworkPipeline
+INCLUDEPATH += $$PWD/MultiNetworkPipeline-Scheduler
+DEPENDPATH += $$PWD/MultiNetworkPipeline-Scheduler
 
 # Linux HailoRT
 unix:!macx: LIBS += -L$$PWD/../../../../../usr/lib/ -lhailort
