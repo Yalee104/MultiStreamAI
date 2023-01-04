@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 #else
 
 #include <vector>
-#include "MultiNetworkPipeline-scheduler.hpp"
+#include "../MultiNetworkPipeline-scheduler.hpp"
 #include <opencv2/opencv.hpp>
 #include <algorithm>
 #include <dirent.h>
@@ -60,7 +60,7 @@ void start() {
       //Add Network
       stNetworkModelInfo Yolov5Network;
       Yolov5Network.id_name = "yolov5";
-      Yolov5Network.hef_path = "Test/Network/yolov5m.hef";
+      Yolov5Network.hef_path = "Network/yolov5m.hef";
       Yolov5Network.output_order_by_name.clear();
       Yolov5Network.batch_size = 1;
       Yolov5Network.in_quantized = false;

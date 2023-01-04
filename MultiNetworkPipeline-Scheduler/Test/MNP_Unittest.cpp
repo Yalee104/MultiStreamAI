@@ -13,7 +13,7 @@
 
 
 #include <vector>
-#include "MultiNetworkPipeline-scheduler.hpp"
+#include "../MultiNetworkPipeline-scheduler.hpp"
 #include "gtest/gtest.h"
 #include <opencv2/opencv.hpp>
 #include <algorithm>
@@ -93,7 +93,7 @@ TEST_F(MNPTest1, MNP1CheckInputsize) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -125,7 +125,7 @@ TEST_F(MNPTest1, MNP1CheckQuantizationInfo) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -164,7 +164,7 @@ TEST_F(MNPTest1, MNP3OneNetworkinferAndRemove) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -221,7 +221,7 @@ TEST_F(MNPTest1, MNP5MultipleNetworkInfer) {
     //Add Network - Yolov4
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -244,7 +244,7 @@ TEST_F(MNPTest1, MNP5MultipleNetworkInfer) {
     //Add Network - Yolov5m
     stNetworkModelInfo Yolov5mNetwork;
     Yolov5mNetwork.id_name = "yolov5m";
-    Yolov5mNetwork.hef_path = "Test/Network/yolov5m.hef";
+    Yolov5mNetwork.hef_path = "Network/yolov5m.hef";
     Yolov5mNetwork.output_order_by_name.clear();        
     Yolov5mNetwork.batch_size = 1;
     Yolov5mNetwork.in_quantized = false;
@@ -362,7 +362,7 @@ TEST_F(MNPTest1, MNP8MultipleInferwithImageAndRemove) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -374,8 +374,8 @@ TEST_F(MNPTest1, MNP8MultipleInferwithImageAndRemove) {
 
 
 
-    //Get all files under Test/Images/
-    std::string ImagePath("Test/Images/");
+    //Get all files under Images/
+    std::string ImagePath("Images/");
     std::vector<std::string> fileList = GetRecords(ImagePath);
     for (auto file : fileList)
     {
@@ -435,7 +435,7 @@ TEST_F(MNPTest1, MNP10MultipleInferwithImageOnSameChannel) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -448,15 +448,15 @@ TEST_F(MNPTest1, MNP10MultipleInferwithImageOnSameChannel) {
     //Add Network (dummy)
     stNetworkModelInfo NetworkDummy;
     NetworkDummy.id_name = "yolov4";
-    NetworkDummy.hef_path = "Test/Network/yolov4.hef";
+    NetworkDummy.hef_path = "Network/yolov4.hef";
     NetworkDummy.output_order_by_name.clear();        
     NetworkDummy.batch_size = 1;
     size_t NetworkDummyInputSize = 512*512*3; //Yolov4 input size
     std::vector<uint8_t> DummyNetworkInput(NetworkDummyInputSize, 0);
     EXPECT_EQ(pHailoPipeline->AddNetwork(0, NetworkDummy), MnpReturnCode::SUCCESS);
     
-    //Get all files under Test/Images/
-    std::string ImagePath("Test/Images/"); 
+    //Get all files under Images/
+    std::string ImagePath("Images/"); 
     std::vector<std::string> fileList = GetRecords(ImagePath);
     for (auto file : fileList)
     {
@@ -534,7 +534,7 @@ TEST_F(MNPTest1, MNP12OneNetworkinferNoTransformAndRemove) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -583,7 +583,7 @@ TEST_F(MNPTest1, MNP20MultipleNetworkCrossAddInfer) {
     //Add Network - Yolov4
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -619,7 +619,7 @@ TEST_F(MNPTest1, MNP20MultipleNetworkCrossAddInfer) {
     //Add Network - Yolov5m
     stNetworkModelInfo Yolov5mNetwork;
     Yolov5mNetwork.id_name = "yolov5m";
-    Yolov5mNetwork.hef_path = "Test/Network/yolov5m.hef";
+    Yolov5mNetwork.hef_path = "Network/yolov5m.hef";
     Yolov5mNetwork.output_order_by_name.clear();
     Yolov5mNetwork.batch_size = 1;
     Yolov5mNetwork.in_quantized = false;
@@ -696,7 +696,7 @@ TEST_F(MNPTest1, MNPX_OneNetwork2InputInferTest) {
     //Add Network
     stNetworkModelInfo Yolov5sLanenet;
     Yolov5sLanenet.id_name = "yolov5slanenet";
-    Yolov5sLanenet.hef_path = "Test/Network/joined_yolov5s_LPRNet_single_context.hef";
+    Yolov5sLanenet.hef_path = "Network/joined_yolov5s_LPRNet_single_context.hef";
     Yolov5sLanenet.output_order_by_name.clear();
     Yolov5sLanenet.batch_size = 1;
     Yolov5sLanenet.in_quantized = false;
@@ -748,7 +748,7 @@ TEST_F(MNPTest1, MNPX_TwoNetworkGroup2InputInferTest) {
     //Add Network
     stNetworkModelInfo Yolov4Lanenet;
     Yolov4Lanenet.id_name = "yolov4lanenet_sc";
-    Yolov4Lanenet.hef_path = "Test/Network/joined_yolov4_tiny_lanenet_single_context.hef";
+    Yolov4Lanenet.hef_path = "Network/joined_yolov4_tiny_lanenet_single_context.hef";
     Yolov4Lanenet.output_order_by_name.clear();
     Yolov4Lanenet.batch_size = 1;
     Yolov4Lanenet.in_quantized = false;
@@ -800,7 +800,7 @@ TEST_F(MNPTest1, MNPX_TwoNetworkGroup2InputMultiContextInferTest) {
     //Add Network
     stNetworkModelInfo Yolov4Lanenet;
     Yolov4Lanenet.id_name = "yolov4lanenet_sc";
-    Yolov4Lanenet.hef_path = "Test/Network/joined_yolov4_tiny_lanenet_mutiple_context.hef";
+    Yolov4Lanenet.hef_path = "Network/joined_yolov4_tiny_lanenet_mutiple_context.hef";
     Yolov4Lanenet.output_order_by_name.clear();
     Yolov4Lanenet.batch_size = 1;
     Yolov4Lanenet.in_quantized = false;
@@ -855,7 +855,7 @@ TEST_F(MNPTest1, MNP4OneNetworkMultipleInferAndRemove) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -936,7 +936,7 @@ TEST_F(MNPTest1, MNP5MultipleNetworkInfer) {
     //Add Network - Yolov4
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -959,7 +959,7 @@ TEST_F(MNPTest1, MNP5MultipleNetworkInfer) {
     //Add Network - Yolov5m
     stNetworkModelInfo Yolov5mNetwork;
     Yolov5mNetwork.id_name = "yolov5m";
-    Yolov5mNetwork.hef_path = "Test/Network/yolov5m.hef";
+    Yolov5mNetwork.hef_path = "Network/yolov5m.hef";
     Yolov5mNetwork.output_order_by_name.clear();        
     Yolov5mNetwork.batch_size = 1;
     Yolov5mNetwork.in_quantized = false;
@@ -1121,7 +1121,7 @@ TEST_F(MNPTest1, MNP7InferwithImageAndRemove) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -1135,7 +1135,7 @@ TEST_F(MNPTest1, MNP7InferwithImageAndRemove) {
     std::vector<uint8_t> ImageInput(InputSize, 0);
 
     cv::Mat Imageframe(224, 224, CV_8UC3);;
-    Imageframe = cv::imread("Test/Images/761_remotecontroller.jpg");       
+    Imageframe = cv::imread("Images/761_remotecontroller.jpg");       
     
     int totalsz = Imageframe.dataend-Imageframe.datastart;
     ImageInput.assign(Imageframe.datastart, Imageframe.datastart + totalsz);
@@ -1187,7 +1187,7 @@ TEST_F(MNPTest1, MNP8MultipleInferwithImageAndRemove) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -1199,8 +1199,8 @@ TEST_F(MNPTest1, MNP8MultipleInferwithImageAndRemove) {
 
 
 
-    //Get all files under Test/Images/
-    std::string ImagePath("Test/Images/"); 
+    //Get all files under Images/
+    std::string ImagePath("Images/"); 
     std::vector<std::string> fileList = GetRecords(ImagePath);
     for (auto file : fileList)
     {
@@ -1272,7 +1272,7 @@ TEST_F(MNPTest1, MNP9MultipleInferwithImageAndRemoveWithDataID) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -1284,8 +1284,8 @@ TEST_F(MNPTest1, MNP9MultipleInferwithImageAndRemoveWithDataID) {
 
 
 
-    //Get all files under Test/Images/
-    std::string ImagePath("Test/Images/"); 
+    //Get all files under Images/
+    std::string ImagePath("Images/"); 
     std::vector<std::string> fileList = GetRecords(ImagePath);
     for (auto file : fileList)
     {
@@ -1358,7 +1358,7 @@ TEST_F(MNPTest1, MNP11NetworkInputSizeCheck) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;           
     EXPECT_EQ(pHailoPipeline->AddNetwork(0, Network), MnpReturnCode::SUCCESS);
@@ -1368,7 +1368,7 @@ TEST_F(MNPTest1, MNP11NetworkInputSizeCheck) {
     //Add Network - Yolov5m
     stNetworkModelInfo Yolov5mNetwork;
     Yolov5mNetwork.id_name = "yolov5m";
-    Yolov5mNetwork.hef_path = "Test/Network/yolov5m.hef";
+    Yolov5mNetwork.hef_path = "Network/yolov5m.hef";
     Yolov5mNetwork.output_order_by_name.clear();        
     Yolov5mNetwork.batch_size = 1;     
     EXPECT_EQ(pHailoPipeline->AddNetwork(0, Yolov5mNetwork), MnpReturnCode::SUCCESS);
@@ -1389,7 +1389,7 @@ TEST_F(MNPTest1, MNP11NetworkInputSizeCheck) {
     //affect future inference
     std::vector<uint8_t> ImageInput(ResnetActualInputSize, 0);
     cv::Mat Imageframe(224, 224, CV_8UC3);;
-    Imageframe = cv::imread("Test/Images/761_remotecontroller.jpg");       
+    Imageframe = cv::imread("Images/761_remotecontroller.jpg");       
     
     int totalsz = Imageframe.dataend-Imageframe.datastart;
     ImageInput.assign(Imageframe.datastart, Imageframe.datastart + totalsz);
@@ -1443,7 +1443,7 @@ TEST_F(MNPTest1, MNP12OneNetworkinferNoTransformAndRemove) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -1503,7 +1503,7 @@ TEST_F(MNPTest1, MNP13OneNetworkMultipleInferAndRemove) {
     //Add Network
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -1584,7 +1584,7 @@ TEST_F(MNPTest1, MNP14MultipleNetworkInferWithNoTransformMix) {
     //Add Network - Yolov4
     stNetworkModelInfo Yolov4Network;
     Yolov4Network.id_name = "yolov4";
-    Yolov4Network.hef_path = "Test/Network/yolov4.hef";
+    Yolov4Network.hef_path = "Network/yolov4.hef";
     Yolov4Network.output_order_by_name.clear();        
     Yolov4Network.batch_size = 1;
     Yolov4Network.in_quantized = false;
@@ -1607,7 +1607,7 @@ TEST_F(MNPTest1, MNP14MultipleNetworkInferWithNoTransformMix) {
     //Add Network - Yolov5m
     stNetworkModelInfo Yolov5mNetwork;
     Yolov5mNetwork.id_name = "yolov5m";
-    Yolov5mNetwork.hef_path = "Test/Network/yolov5m.hef";
+    Yolov5mNetwork.hef_path = "Network/yolov5m.hef";
     Yolov5mNetwork.output_order_by_name.clear();        
     Yolov5mNetwork.batch_size = 1;
     Yolov5mNetwork.in_quantized = false;
@@ -1768,7 +1768,7 @@ TEST_F(MNPTest1, MNP15InferwithImageNoTransformationAndRemove) {
     //Add Network
     stNetworkModelInfo Network;
     Network.id_name = "resnet50";
-    Network.hef_path = "Test/Network/resnet_v1_50.hef";
+    Network.hef_path = "Network/resnet_v1_50.hef";
     Network.output_order_by_name.clear();        
     Network.batch_size = 1;
     Network.in_quantized = false;
@@ -1782,7 +1782,7 @@ TEST_F(MNPTest1, MNP15InferwithImageNoTransformationAndRemove) {
     std::vector<uint8_t> ImageInput(InputSize, 0);
 
     cv::Mat Imageframe(224, 224, CV_8UC3);;
-    Imageframe = cv::imread("Test/Images/761_remotecontroller.jpg");       
+    Imageframe = cv::imread("Images/761_remotecontroller.jpg");       
     
     int totalsz = Imageframe.dataend-Imageframe.datastart;
     ImageInput.assign(Imageframe.datastart, Imageframe.datastart + totalsz);

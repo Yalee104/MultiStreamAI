@@ -33,8 +33,8 @@ endif()
 add_definitions(-DLARGE_INFER_QUEUE_FOR_UNIT_TEST)
 
 
-set(MULTINETWORKLIB_LIB_SRC MultiNetworkPipeline-scheduler.cpp)
-include_directories(./Utils)
+set(MULTINETWORKLIB_LIB_SRC ../MultiNetworkPipeline-scheduler.cpp)
+include_directories(../Utils)
 
 #add_library(multi_network_pipeline SHARED ${MULTINETWORKLIB_LIB_SRC})
 add_library(multi_network_pipeline STATIC ${MULTINETWORKLIB_LIB_SRC})
@@ -43,8 +43,8 @@ set_property(TARGET multi_network_pipeline PROPERTY POSITION_INDEPENDENT_CODE ON
 
 foreach(target runme_test.$ENV{LIB_VER})
     add_executable(${target} main_test.cpp 
-                             Test/MNP_Unittest.cpp)
-                             #Test/MNP_Statistics.cpp)
+                             MNP_Unittest.cpp)
+                             
     # https://github.com/llohse/libnpy
     # target_include_directories(${target} PUBLIC /home/nadave/repos/libnpy)
     target_compile_options(${target} PRIVATE ${COMPILE_OPTIONS_CPP})

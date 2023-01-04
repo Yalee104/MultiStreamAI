@@ -101,7 +101,7 @@ enum class MnpReturnCode {
     
     //Success Code List
     SUCCESS                 =0,
-    DUPLICATE               =1,
+    DUPLICATED              =1,
     NO_DATA_AVAILABLE       =2,
     
     //Failure Code list
