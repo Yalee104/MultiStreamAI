@@ -412,13 +412,13 @@ MnpReturnCode MultiNetworkPipeline::ReleaseAllResource()
 
     for (int i = 0; i < NUMBER_OF_DEV_SUPPORTED; i++) {
         if (vdevices[i] != NULL) {
-            std::cout << "Release Device-" << i << "Address: " << &vdevices[i] << std::endl;
+            //std::cout << "Release Device-" << i << "Address: " << &vdevices[i] << std::endl;
             (void) hailo_release_vdevice(vdevices[i]);
             
         }        
     }
 
-    std::cout << "Release Done" << std::endl;
+    //std::cout << "Release Done" << std::endl;
 
     hailo_device_found = 0;
     
@@ -471,7 +471,7 @@ size_t MultiNetworkPipeline::InitializeHailo()
             params.multi_process_service = false;       //Set default to false, we can try to support this later
             status = hailo_create_vdevice(&params, &vdevices[i]);
             
-            std::cout << "Allocated vDevice Address: " << &vdevices[i] << std::endl;
+            //std::cout << "Allocated vDevice Address: " << &vdevices[i] << std::endl;
 
             REQUIRE_SUCCESS_CHECK(status, init_exit, "Failed to create hailo_create_vdevice");
 
