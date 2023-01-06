@@ -421,7 +421,7 @@ public:
 
     /**
      * Get the output data by network name
-     * @param id_name
+     * @param id_name           the network id name to read the output prediction
      * @param output_buffer     all output layer in a vector/list in sequence given by
      *                          output_order_by_name from network model info.
      * @param stream_id         this is the unique stream_id that you want to get the prediction output
@@ -432,6 +432,16 @@ public:
     MnpReturnCode ReadOutputById(const std::string &id_name, std::vector<std::vector<uint8_t>>& output_buffer, std::string stream_id = DEFAULT_STREAM_ID);
 
 
+    /**
+     * Prepare the size of the output buffer that is going to be used for ReadOutputById
+     * NOTE:    after calling this function output_buffer is reusable, this API simply resize the given output_buffer
+     *          there is no need to call this API everytime before you call ReadOutputById.
+     * @param id_name           the network id name to prepare the output buffer
+     * @param output_buffer     Provide the output buffer vector, it will resize based on the network output and prepare
+     *                          it so that it can be used when calling ReadOutputById
+     * @param stream_id         this is the unique stream_id.
+     * @return SUCCESS, NOT_FOUND, HAILO_NOT_INITIALIZED
+     */
     template<typename T>
     MnpReturnCode InitializeOutputBuffer(const std::string &id_name, std::vector<std::vector<T>>& output_buffer, std::string stream_id = DEFAULT_STREAM_ID)
     {
