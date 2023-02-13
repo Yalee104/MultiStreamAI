@@ -99,25 +99,19 @@ bool MultiNetworkPipeline::isHefObjGivenIdDuplicated(const stNetworkModelInfo &N
 }
 
 
-bool MultiNetworkPipeline::isStreamIdUnique(std::string stream_id)
+bool MultiNetworkPipeline::isNetworkIdUnique(std::string network_id)
 {
-    bool StreamIdIsUnique = true;
+    bool NetworkIdIsUnique = true;
 
-    for (size_t i = 0; i < hailo_device_found; i++) {
-        for (size_t j = 0; j < NUMBER_STREAM_SUPPORTED; j++) {
-            for (size_t k = 0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-                if (streamInfoList[i][j][k].SlotInUse) {
-                    if (streamInfoList[j][j][k].Stream_Id.compare(stream_id) == 0) {
-                        StreamIdIsUnique = false;
-                        goto l_exit;
-                    }
-                }
-            }
+    std::list <stHailoStreamInfo*> :: iterator itr;
+    for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
+        if ((*itr)->NetworkIdName.compare(network_id) == 0) {
+            NetworkIdIsUnique = false;
+            break;
         }
     }
 
-l_exit:
-    return StreamIdIsUnique;
+    return NetworkIdIsUnique;
 }
 
 
@@ -127,7 +121,7 @@ int MultiNetworkPipeline::FindHefObjSlot(const stNetworkModelInfo &NewNetworkInf
     for (int k = 0; k < TOTAL_HEF_SUPPORTED; k++) {
         if (addedNetworkModel[k].hefObj != NULL) {
 
-            if (addedNetworkModel[k].NetworkModelInfo.id_name.compare(NewNetworkInfo.id_name) == 0) {
+            if (addedNetworkModel[k].NetworkModelInfo.hef_path.compare(NewNetworkInfo.hef_path) == 0) {
                 HefObjSlot = k;
                 break;
             }
@@ -155,136 +149,42 @@ bool MultiNetworkPipeline::isHefObjAlreadyAdded(const stNetworkModelInfo &NewNet
 }
 
 
-int  MultiNetworkPipeline::FindNetworkGroupCorrespondingStreamIndex(uint32_t device_id, std::string stream_id)
+stHailoStreamInfo*  MultiNetworkPipeline::GetNetworkStreamInfoFromMatchingNetworkId(std::string id_name)
 {
-    int stream_channel_index = -1;
+    stHailoStreamInfo* pHailoStreamInfo = nullptr;
 
-    for (int i=0; i < NUMBER_STREAM_SUPPORTED; i++) {
-
-        for (int k=0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-
-            if (streamInfoList[device_id][i][k].SlotInUse)
-            {
-                if (streamInfoList[device_id][i][k].Stream_Id.compare(stream_id) == 0) {
-                    stream_channel_index = i;
-                    break;
-                }
-            }
-        }
-
-        //Found?
-        if (stream_channel_index >= 0) {
+    std::list <stHailoStreamInfo*> :: iterator itr;
+    for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
+        if ((*itr)->NetworkIdName.compare(id_name) == 0) {
+            pHailoStreamInfo = *itr;
             break;
         }
     }
 
-    return stream_channel_index;
-}
-
-
-int  MultiNetworkPipeline::FindNetworkGroupAvailableStreamIndex(uint32_t device_id)
-{
-    int stream_channel_index = -1;
-
-    for (int i=0; i < NUMBER_STREAM_SUPPORTED; i++) {
-
-        stream_channel_index = i;
-
-        for (int k=0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-
-            //If any hef per stream slot is in use then this stream index is occupied, we break and reset the stream_channel_index
-            if (streamInfoList[device_id][i][k].SlotInUse)
-            {
-                stream_channel_index = -1;
-                break;
-            }
-        }
-
-        //We do find empty slot
-        if (stream_channel_index >= 0)
-            break;
-    }
-
-    return stream_channel_index;
-}
-
-
-int  MultiNetworkPipeline::FindNetworkGroupAvailableSlot(uint32_t device_id, uint32_t stream_channel, const stNetworkModelInfo &NewNetworkInfo)
-{
-    //-1 is already added (network already created for the selected stream on selected device), its not really an error and will be ignored
-    //-2 reached capacity, need to adjust NUMBER_HEF_PER_STREAM_SUPPORTED if more network in pipeline is needed per stream.
-    int NetworkGroupAvailableSlot = -2;
-
-    for (int i=0; i < NUMBER_HEF_PER_STREAM_SUPPORTED; i++) {
-
-        if (streamInfoList[device_id][stream_channel][i].SlotInUse)
-        {
-            if (streamInfoList[device_id][stream_channel][i].NetworkIdName.compare(NewNetworkInfo.id_name) == 0) {
-                NetworkGroupAvailableSlot = -1;
-                break;
-            }
-        }
-        else {
-            
-            //Reaching here means slot is not in use, we will just record the first found slot.
-            if (NetworkGroupAvailableSlot < 0) {
-                NetworkGroupAvailableSlot = i;
-            }
-        }
-    }
-
-    return NetworkGroupAvailableSlot;
-
-}
-
-
-stHailoStreamInfo*  MultiNetworkPipeline::GetNetworkStreamInfoFromAnyMatchingNetwork(std::string id_name)
-{
-    for (size_t i = 0; i < hailo_device_found; i++) {
-        for (int j = 0; j < NUMBER_STREAM_SUPPORTED; j++) {
-            for (int k = 0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-                if (streamInfoList[i][j][k].SlotInUse) {
-                    if (streamInfoList[i][j][k].NetworkIdName.compare(id_name) == 0) {
-                        return &streamInfoList[i][j][k];
-                    }
-                }
-            }
-        }
-    }
-
-    return NULL;
+    return pHailoStreamInfo;
 }
 
 
 stHailoStreamInfo*  MultiNetworkPipeline::GetNetworkStreamInfoFromStreamChannel(std::string id_name, std::string stream_id /*= "default" */)
 {
-    int     stream_channel_index = -1;
-    size_t  device_id = 0;
 
-    for (size_t i = 0; i < hailo_device_found; i++) {
+    stHailoStreamInfo* pHailoStreamInfo = nullptr;
 
-        stream_channel_index = FindNetworkGroupCorrespondingStreamIndex(i, stream_id);
+    std::list <stHailoStreamInfo*> :: iterator itr;
+    for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
 
-        if (stream_channel_index >= 0) {
-            device_id = i;
+        if ((*itr)->Stream_Id.compare(stream_id) != 0)
+            continue;
+
+        if ((*itr)->NetworkIdName.compare(id_name) == 0) {
+            pHailoStreamInfo = *itr;
             break;
         }
     }
 
-    if (stream_channel_index >= 0) {
-        for (int k = 0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-            if (streamInfoList[device_id][stream_channel_index][k].SlotInUse) {
-                if (streamInfoList[device_id][stream_channel_index][k].NetworkIdName.compare(id_name) == 0) {
-                    return &streamInfoList[device_id][stream_channel_index][k];
-                }
-            }
-        }
-    }
+    return pHailoStreamInfo;
 
-    return NULL;
 }
-
-
 
 
 
@@ -336,7 +236,6 @@ MultiNetworkPipeline *MultiNetworkPipeline::GetInstance()
 
 MnpReturnCode MultiNetworkPipeline::ReleaseStreamChannel(uint32_t device_id, std::string stream_id /*= "default"*/)
 {
-    //TODO: When there is time, revise this as too many depth, may have to revise how we store streamInfoList
 
     if (!hailo_device_found)
         return MnpReturnCode::HAILO_NOT_INITIALIZED;
@@ -350,26 +249,23 @@ MnpReturnCode MultiNetworkPipeline::ReleaseStreamChannel(uint32_t device_id, std
     //Protect resource
     std::lock_guard<std::mutex> lock(mutex_class_protection);
 
-    int stream_channel_index = FindNetworkGroupCorrespondingStreamIndex(device_id, stream_id);
-    if (stream_channel_index >=0) {
-        for (size_t k = 0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-            if (streamInfoList[device_id][stream_channel_index][k].SlotInUse) {
+    std::list <stHailoStreamInfo*> :: iterator itr;
+    for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
 
-                (void)hailo_release_output_vstreams(streamInfoList[device_id][stream_channel_index][k].NetVstreamOutputs,
-                                                    streamInfoList[device_id][stream_channel_index][k].NetVstreamOutputCount);
+        if ((*itr)->Device_Id != device_id)
+            continue;
 
-                (void)hailo_release_input_vstreams( streamInfoList[device_id][stream_channel_index][k].NetVstreamInputs,
-                                                    streamInfoList[device_id][stream_channel_index][k].NetVstreamInputCount);
+        if ((*itr)->Stream_Id.compare(stream_id) == 0) {
 
+            (void)hailo_release_output_vstreams((*itr)->NetVstreamOutputs,
+                                                (*itr)->NetVstreamOutputCount);
 
-                streamInfoList[device_id][stream_channel_index][k].SlotInUse = false;
-                streamInfoList[device_id][stream_channel_index][k].Stream_Id = "";
-            }
+            (void)hailo_release_input_vstreams( (*itr)->NetVstreamInputs,
+                                                (*itr)->NetVstreamInputCount);
+
+            streamInfoList.erase(itr--);
         }
-    }
-    else {
-        DBG_WARN("Given stream_id not found");
-        return MnpReturnCode::INVALID_PARAMETER;
+
     }
 
     return MnpReturnCode::SUCCESS;
@@ -383,25 +279,18 @@ MnpReturnCode MultiNetworkPipeline::ReleaseAllResource()
     //Protect resource
     std::lock_guard<std::mutex> lock(mutex_class_protection);
 
-    //TODO: When there is time, revise this as too many depth, may have to revise how we store streamInfoList
-    for (size_t i = 0; i < NUMBER_OF_DEV_SUPPORTED; i++) {
-        for (size_t j = 0; j < NUMBER_STREAM_SUPPORTED; j++) {
-            for (size_t k = 0; k < NUMBER_HEF_PER_STREAM_SUPPORTED; k++) {
-                if (streamInfoList[i][j][k].SlotInUse) {
-                    (void)hailo_release_output_vstreams(streamInfoList[i][j][k].NetVstreamOutputs,
-                                                        streamInfoList[i][j][k].NetVstreamOutputCount);
+    std::list <stHailoStreamInfo*> :: iterator itr;
+    for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
 
-                    (void)hailo_release_input_vstreams( streamInfoList[i][j][k].NetVstreamInputs,
-                                                        streamInfoList[i][j][k].NetVstreamInputCount);
+        (void)hailo_release_output_vstreams((*itr)->NetVstreamOutputs,
+                                            (*itr)->NetVstreamOutputCount);
 
+        (void)hailo_release_input_vstreams( (*itr)->NetVstreamInputs,
+                                            (*itr)->NetVstreamInputCount);
 
-                    streamInfoList[j][j][k].SlotInUse = false;
-                    streamInfoList[j][j][k].Stream_Id = "";
-                }
-            }
-        }
+        streamInfoList.erase(itr--);
+
     }
-
 
     for (int j = 0; j < TOTAL_HEF_SUPPORTED; j++) {     
         if (addedNetworkModel[j].hefObj != NULL) {
@@ -418,11 +307,9 @@ MnpReturnCode MultiNetworkPipeline::ReleaseAllResource()
         }        
     }
 
-    //std::cout << "Release Done" << std::endl;
-
     hailo_device_found = 0;
     
-l_exit:
+    //std::cout << "Release Done" << std::endl;
     return RetCode;
 }
 
@@ -495,8 +382,7 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
     
     MnpReturnCode RetCode = MnpReturnCode::FAILED;
     hailo_status status = HAILO_SUCCESS;
-    int NetworkGroupAvailableSlotIndex = -2;
-    int stream_channel_index = -1;
+    stHailoStreamInfo* pHailoStreamInfoObj = nullptr;
 
     if (!hailo_device_found)
         return MnpReturnCode::HAILO_NOT_INITIALIZED;
@@ -505,14 +391,6 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
     {
         DBG_WARN("device id exceeded current maximum hailodevice found (" << hailo_device_found << ")");
         return MnpReturnCode::INVALID_PARAMETER;        
-    }
-
-    if (FindNetworkGroupCorrespondingStreamIndex(device_id, stream_id) <= 0) {
-        if (FindNetworkGroupAvailableStreamIndex(device_id) < 0)
-        {
-            DBG_WARN("max stream allowed reached (Please increase NUMBER_STREAM_SUPPORTED)");
-            return MnpReturnCode::INVALID_PARAMETER;
-        }
     }
 
     if ((NewNetworkInfo.out_format != HAILO_FORMAT_TYPE_UINT8) && 
@@ -555,35 +433,15 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
     {
         int HefObjSlot = FindHefObjSlot(NewNetworkInfo);
         if (HefObjSlot < 0) {
-            DBG_WARN("Unable to find matched id_name while hef path (network) is already added in the list");
+            DBG_WARN("Unable to find matched hef path (network) which should be already added in the list");
             return MnpReturnCode::INVALID_PARAMETER;
         }
 
-        //First find if the already in use stream, if not found it mean new stream and we get new available stream slot
-        stream_channel_index = FindNetworkGroupCorrespondingStreamIndex(device_id, stream_id);
-        if (stream_channel_index < 0) {
-            //Not found, so it must be new stream, let's first check if the given stream_id is unique across all available devices
-            if (isStreamIdUnique(stream_id) == false) {
-                DBG_WARN("Give stream_id for new stream MUST be unique across all devices.");
-                return MnpReturnCode::INVALID_PARAMETER;
-            }
-
-            stream_channel_index = FindNetworkGroupAvailableStreamIndex(device_id);
+        if (isNetworkIdUnique(NewNetworkInfo.id_name) == false) {
+            DBG_WARN("Give network_id MUST be unique across all devices & streams");
+            return MnpReturnCode::INVALID_PARAMETER;
         }
 
-        NetworkGroupAvailableSlotIndex = FindNetworkGroupAvailableSlot(device_id, stream_channel_index, NewNetworkInfo);
-        if (NetworkGroupAvailableSlotIndex < 0) {
-            if (NetworkGroupAvailableSlotIndex == -1) {
-                DBG_WARN("Network already configured for the stream, network id_name: " << NewNetworkInfo.id_name << ", will skip as success");   
-                return MnpReturnCode::SUCCESS;         
-            }
-
-            if (NetworkGroupAvailableSlotIndex == -2) {
-                DBG_WARN("Available network group per stream exceed limitation, check NUMBER_HEF_PER_STREAM_SUPPORTED");   
-                return MnpReturnCode::INVALID_PARAMETER;         
-            }
-
-        }
 
         hailo_configure_params_t configure_params = {0};
         size_t network_groups_size = 1;
@@ -591,38 +449,42 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
         status = hailo_init_configure_params(addedNetworkModel[HefObjSlot].hefObj, HAILO_STREAM_INTERFACE_PCIE, &configure_params);
         REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed to hailo_init_configure_params");
 
+        // Allocate new stream object
+        pHailoStreamInfoObj = new stHailoStreamInfo();
+
+        pHailoStreamInfoObj->Device_Id = device_id;
         status = hailo_configure_vdevice(   vdevices[device_id], 
                                             addedNetworkModel[HefObjSlot].hefObj, 
                                             &configure_params,
-                                            &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
+                                            &pHailoStreamInfoObj->NetworkGroups,
                                             &network_groups_size);
-        REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed to hailo_configure_vdevice");
+        REQUIRE_SUCCESS_CHECK(status, l_release, "Failed to hailo_configure_vdevice");
         if (network_groups_size > 1) {
             DBG_WARN("Hef with more that one network group, currently not supported. Contact field support agent for detail");
         }
 
-        streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkIdName = NewNetworkInfo.id_name;
-        streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].SlotInUse = true;
-        streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].Stream_Id = stream_id;
+        pHailoStreamInfoObj->NetworkIdName = NewNetworkInfo.id_name;
+        pHailoStreamInfoObj->Stream_Id = stream_id;
 
         /* Make Input/Output VStream */
-        streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputCount = MAX_SUPPORTED_INPUT_LAYER;
-        status = hailo_make_input_vstream_params(streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
-                                                NewNetworkInfo.in_quantized, 
-                                                NewNetworkInfo.in_format,
-                                                streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam,
-                                                &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputCount);
-        REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed making input virtual stream params");
+        pHailoStreamInfoObj->NetVstreamInputCount = MAX_SUPPORTED_INPUT_LAYER;
+        status = hailo_make_input_vstream_params(pHailoStreamInfoObj->NetworkGroups,
+                                                 NewNetworkInfo.in_quantized,
+                                                 NewNetworkInfo.in_format,
+                                                 pHailoStreamInfoObj->NetVstreamInputParam,
+                                                 &pHailoStreamInfoObj->NetVstreamInputCount);
 
+        REQUIRE_SUCCESS_CHECK(status, l_release, "Failed making input virtual stream params");
 
-        streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputCount = MAX_SUPPORTED_OUTPUT_LAYER;
-        status = hailo_make_output_vstream_params(  streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
+        pHailoStreamInfoObj->NetVstreamOutputCount = MAX_SUPPORTED_OUTPUT_LAYER;
+
+        status = hailo_make_output_vstream_params(  pHailoStreamInfoObj->NetworkGroups,
                                                     NewNetworkInfo.out_quantized, 
                                                     NewNetworkInfo.out_format,
-                                                    streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam,
-                                                    &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputCount);
+                                                    pHailoStreamInfoObj->NetVstreamOutputParam,
+                                                    &pHailoStreamInfoObj->NetVstreamOutputCount);
         
-        REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed making output virtual stream params");
+        REQUIRE_SUCCESS_CHECK(status, l_release, "Failed making output virtual stream params");
     
     }
 
@@ -632,7 +494,7 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
         if (!NewNetworkInfo.input_order_by_name.empty())
             bUseDefaultInputOrder = false;
 
-        size_t InputStreamCount = streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputCount;
+        size_t InputStreamCount = pHailoStreamInfoObj->NetVstreamInputCount;
         for (size_t i = 0; i < InputStreamCount; i++)
         {
 
@@ -640,14 +502,14 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
             {
 
 #ifdef LARGE_INFER_QUEUE_FOR_UNIT_TEST
-                streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[i].params.queue_size = 20;
+                pHailoStreamInfoObj->NetVstreamInputParam[i].params.queue_size = 20;
 #endif
-                status = hailo_create_input_vstreams(   streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[i],
+                status = hailo_create_input_vstreams(   pHailoStreamInfoObj->NetworkGroups,
+                                                        &pHailoStreamInfoObj->NetVstreamInputParam[i],
                                                         1, 
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputs[i]);
-                REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed creating virtual input stream");
-                DBG_INFO( "inut_stream_by_name " << streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[i].name);
+                                                        &pHailoStreamInfoObj->NetVstreamInputs[i]);
+                REQUIRE_SUCCESS_CHECK(status, l_release, "Failed creating virtual input stream");
+                DBG_INFO( "inut_stream_by_name " << pHailoStreamInfoObj->NetVstreamInputParam[i].name);
 
             }
             else 
@@ -655,16 +517,16 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
                 bool bFound = false;
                 for (size_t j = 0; j < InputStreamCount; j++)
                 {
-                    if (strcmp(streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[j].name, NewNetworkInfo.input_order_by_name[i].c_str()) == 0)
+                    if (strcmp(pHailoStreamInfoObj->NetVstreamInputParam[j].name, NewNetworkInfo.input_order_by_name[i].c_str()) == 0)
                     {
-                        status = hailo_create_input_vstreams(   streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
-                                                                &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[j],
+                        status = hailo_create_input_vstreams(   pHailoStreamInfoObj->NetworkGroups,
+                                                                &pHailoStreamInfoObj->NetVstreamInputParam[j],
                                                                 1, 
-                                                                &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputs[i]);
+                                                                &pHailoStreamInfoObj->NetVstreamInputs[i]);
 
-                        DBG_INFO( "inut_stream_by_name " << streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputParam[j].name);
+                        DBG_INFO( "inut_stream_by_name " << pHailoStreamInfoObj->NetVstreamInputParam[j].name);
 
-                        REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed creating virtual input stream");
+                        REQUIRE_SUCCESS_CHECK(status, l_release, "Failed creating virtual input stream");
 
                         bFound = true;
                         break;       
@@ -674,25 +536,25 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
                 if (bFound == false)
                 {
                     DBG_WARN("Unable to find given input layer name " << NewNetworkInfo.input_order_by_name[i]);
-                    goto l_exit;
+                    goto l_release;
                 }             
             }
 
 
-            status = hailo_get_input_vstream_frame_size(streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputs[i],
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputFrameSize[i]);
-            REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed getting input virtual stream frame size");
+            status = hailo_get_input_vstream_frame_size(pHailoStreamInfoObj->NetVstreamInputs[i],
+                                                        &pHailoStreamInfoObj->NetVstreamInputFrameSize[i]);
+            REQUIRE_SUCCESS_CHECK(status, l_release, "Failed getting input virtual stream frame size");
 
             //Get input stream info
             hailo_vstream_info_t in_vstream_info;
-            status = hailo_get_input_vstream_info(  streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputs[i],
+            status = hailo_get_input_vstream_info(  pHailoStreamInfoObj->NetVstreamInputs[i],
                                                     &in_vstream_info);
-            REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed hailo_get_input_vstream_info");
+            REQUIRE_SUCCESS_CHECK(status, l_release, "Failed hailo_get_input_vstream_info");
             
             /* Get the quantization info */
             qp_zp_scale_t transformScale = {in_vstream_info.quant_info.qp_zp,
                                             in_vstream_info.quant_info.qp_scale};
-            streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamInputQuantInfo[i] = transformScale;
+            pHailoStreamInfoObj->NetVstreamInputQuantInfo[i] = transformScale;
             //std::cout << "input(" <<  in_vstream_info.name << ")stream format type: " << in_vstream_info.format.type << ", quant info scale = " << transformScale.qp_scale << " zero point = " << transformScale.qp_zp << std::endl;
 
         }    
@@ -704,20 +566,20 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
         if (!NewNetworkInfo.output_order_by_name.empty())
             bUseDefaultOutputOrder = false;
 
-        size_t OutputStreamCount = streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputCount;
+        size_t OutputStreamCount = pHailoStreamInfoObj->NetVstreamOutputCount;
 
         for (size_t i = 0; i < OutputStreamCount; i++)
         {
 
             if (bUseDefaultOutputOrder)
             {
-                status = hailo_create_output_vstreams(  streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam[i],
+                status = hailo_create_output_vstreams(  pHailoStreamInfoObj->NetworkGroups,
+                                                        &pHailoStreamInfoObj->NetVstreamOutputParam[i],
                                                         1, 
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputs[i]);
-                REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed creating virtual output stream");
+                                                        &pHailoStreamInfoObj->NetVstreamOutputs[i]);
+                REQUIRE_SUCCESS_CHECK(status, l_release, "Failed creating virtual output stream");
 
-                DBG_INFO( "output_stream_by_name " << streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam[i].name);
+                DBG_INFO( "output_stream_by_name " << pHailoStreamInfoObj->NetVstreamOutputParam[i].name);
 
             }
             else 
@@ -725,16 +587,16 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
                 bool bFound = false;
                 for (size_t j = 0; j < OutputStreamCount; j++)
                 {
-                    if (strcmp(streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam[j].name, NewNetworkInfo.output_order_by_name[i].c_str()) == 0)
+                    if (strcmp(pHailoStreamInfoObj->NetVstreamOutputParam[j].name, NewNetworkInfo.output_order_by_name[i].c_str()) == 0)
                     {
-                        status = hailo_create_output_vstreams(  streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetworkGroups,
-                                                                &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam[j],
+                        status = hailo_create_output_vstreams(  pHailoStreamInfoObj->NetworkGroups,
+                                                                &pHailoStreamInfoObj->NetVstreamOutputParam[j],
                                                                 1, 
-                                                                &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputs[i]);
+                                                                &pHailoStreamInfoObj->NetVstreamOutputs[i]);
 
-                        DBG_INFO( "output_stream_by_name " << streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputParam[j].name);
+                        DBG_INFO( "output_stream_by_name " << pHailoStreamInfoObj->NetVstreamOutputParam[j].name);
 
-                        REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed creating virtual output stream");
+                        REQUIRE_SUCCESS_CHECK(status, l_release, "Failed creating virtual output stream");
 
 
                         bFound = true;
@@ -750,26 +612,37 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
             }
 
 
-            status = hailo_get_output_vstream_frame_size(streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputs[i],
-                                                        &streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputFrameSize[i]);
-            REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed getting output virtual stream frame size");
+            status = hailo_get_output_vstream_frame_size(pHailoStreamInfoObj->NetVstreamOutputs[i],
+                                                        &pHailoStreamInfoObj->NetVstreamOutputFrameSize[i]);
+            REQUIRE_SUCCESS_CHECK(status, l_release, "Failed getting output virtual stream frame size");
 
             //Get output stream info
             hailo_vstream_info_t out_vstream_info;
-            status = hailo_get_output_vstream_info( streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputs[i],
+            status = hailo_get_output_vstream_info( pHailoStreamInfoObj->NetVstreamOutputs[i],
                                                     &out_vstream_info);
-            REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed hailo_get_output_vstream_info");
+            REQUIRE_SUCCESS_CHECK(status, l_release, "Failed hailo_get_output_vstream_info");
             
             /* Get the quantization info */
             qp_zp_scale_t transformScale = {out_vstream_info.quant_info.qp_zp,
                                             out_vstream_info.quant_info.qp_scale};
-            streamInfoList[device_id][stream_channel_index][NetworkGroupAvailableSlotIndex].NetVstreamOutputQuantInfo[i] = transformScale;
+            pHailoStreamInfoObj->NetVstreamOutputQuantInfo[i] = transformScale;
             //std::cout << "output(" <<  out_vstream_info.name << ")stream format type: " << out_vstream_info.format.type << ", quant info scale = " << transformScale.qp_scale << " zero point = " << transformScale.qp_zp << std::endl;
 
         }    
     }
 
+    // Add the newly added network on device/stream to the list.
+    streamInfoList.push_back(pHailoStreamInfoObj);
+
     RetCode = MnpReturnCode::SUCCESS;
+
+    goto l_exit;
+
+l_release:
+
+    if (pHailoStreamInfoObj)
+        delete pHailoStreamInfoObj;
+
     
 l_exit:
     
@@ -787,7 +660,7 @@ MnpReturnCode MultiNetworkPipeline::GetNetworkInputSize(const std::string &id_na
     //Protect resource
     std::lock_guard<std::mutex> lock(mutex_class_protection);
 
-    stHailoStreamInfo* pStreamInfo = MultiNetworkPipeline::GetNetworkStreamInfoFromAnyMatchingNetwork(id_name);
+    stHailoStreamInfo* pStreamInfo = MultiNetworkPipeline::GetNetworkStreamInfoFromMatchingNetworkId(id_name);
 
     if (pStreamInfo) {
 
@@ -814,7 +687,7 @@ MnpReturnCode MultiNetworkPipeline::GetNetworkQuantizationInfo(const std::string
     //Protect resource
     std::lock_guard<std::mutex> lock(mutex_class_protection);
 
-    stHailoStreamInfo* pStreamInfo = MultiNetworkPipeline::GetNetworkStreamInfoFromAnyMatchingNetwork(id_name);
+    stHailoStreamInfo* pStreamInfo = MultiNetworkPipeline::GetNetworkStreamInfoFromMatchingNetworkId(id_name);
 
     if (pStreamInfo) {
 

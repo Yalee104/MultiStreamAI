@@ -16,6 +16,7 @@
 
 #include <time.h>
 #include <vector>
+#include <list>
 #include <ctype.h>
 #include <cstring> 
 #include <iostream>
@@ -31,15 +32,6 @@
 #include "Utils/Timer.hpp"
 #include "Utils/counter-master/Counter.h"
 #include <type_traits>
-
-
-/*
- *  JOIN_NETWORK_SINGLE_CONTEXT_INDEPENDENT_INFER 
- *  Enabling this allows application to infer specific input network in a join network. HOWEVER, this 
- *  only works if the join network is compiled as single context, DO NOT enable this if you are
- *  going to use HEF file that is join network with multiple context. 
- */
-//#define JOIN_NETWORK_SINGLE_CONTEXT_INDEPENDENT_INFER
 
 
 //TODO: Implement a logging module for more flexibility
@@ -72,11 +64,8 @@
 #define DBG_DEBUG(MSG)
 #endif
 
-
 #define NUMBER_OF_DEV_SUPPORTED             (4)
 #define TOTAL_HEF_SUPPORTED                 (10)
-#define NUMBER_STREAM_SUPPORTED             (32)
-#define NUMBER_HEF_PER_STREAM_SUPPORTED     (4)
 
 #define MAX_SUPPORTED_INPUT_LAYER           (4)
 #define MAX_SUPPORTED_OUTPUT_LAYER          (16)
@@ -230,7 +219,8 @@ typedef struct qp_zp_scale_t {
 
 struct stHailoStreamInfo {
 
-    bool                                    SlotInUse = false;
+    uint32_t                                Device_Id;
+
     std::string                             NetworkIdName; //This is the same as stNetworkModelInfo's id_name
     std::string                             Stream_Id;
     hailo_configured_network_group          NetworkGroups;
@@ -273,21 +263,16 @@ private:
     hailo_device_id_t               device_ids[NUMBER_OF_DEV_SUPPORTED];
     hailo_vdevice                   vdevices[NUMBER_OF_DEV_SUPPORTED];
     stHailoNetworkModelInfo         addedNetworkModel[TOTAL_HEF_SUPPORTED];
-    //TODO: Currently fixed allocated array is simpler to understand, however for maximum flexibility/extension
-    //      suggest to use vector but need special protection when add or removing network/streams
-    stHailoStreamInfo               streamInfoList[NUMBER_OF_DEV_SUPPORTED][NUMBER_STREAM_SUPPORTED][NUMBER_HEF_PER_STREAM_SUPPORTED];
+    std::list<stHailoStreamInfo*>   streamInfoList;
 
 private:
 
     int     FindAvailableHefObjSlot(void); 
     bool    isHefObjAlreadyAdded(const stNetworkModelInfo &NewNetworkInfo); 
     bool    isHefObjGivenIdDuplicated(const stNetworkModelInfo &NewNetworkInfo); 
-    bool    isStreamIdUnique(std::string stream_id);
+    bool    isNetworkIdUnique(std::string network_id);
     int     FindHefObjSlot(const stNetworkModelInfo &NewNetworkInfo);
-    int     FindNetworkGroupCorrespondingStreamIndex(uint32_t device_id, std::string stream_id);
-    int     FindNetworkGroupAvailableStreamIndex(uint32_t device_id);
-    int     FindNetworkGroupAvailableSlot(uint32_t device_id, uint32_t stream_channel, const stNetworkModelInfo &NewNetworkInfo);
-    stHailoStreamInfo*  GetNetworkStreamInfoFromAnyMatchingNetwork(std::string id_name);
+    stHailoStreamInfo*  GetNetworkStreamInfoFromMatchingNetworkId(std::string id_name);
     stHailoStreamInfo*  GetNetworkStreamInfoFromStreamChannel(std::string id_name, std::string stream_id = DEFAULT_STREAM_ID);
 
 
