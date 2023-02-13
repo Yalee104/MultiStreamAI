@@ -5,10 +5,12 @@ This is a AI Demo Project on QT that support x86 and embedded (ARM) platform wit
 
 # Platform Config
 
-For specific platform such as Nvidia Jetson please add defines in [MultiStreamAI.pro](https://github.com/Yalee104/MultiStreamAI/blob/main/MultiStreamAI.pro) as shown below, this will compile for target specific that uses gstreamer with HW decoder of specific platform for optimim performance with multiple streaming.
+For specific platform such as Nvidia Jetson please add defines in [MultiStreamAI.pro](https://github.com/Yalee104/MultiStreamAI/blob/main/MultiStreamAI.pro) as shown below, this will compile for target specific that uses gstreamer with HW decoder of specific platform for optimim performance with multiple streaming. Uncomment the target platform while comment out all others.
 
 ```
+DEFINES += x86
 DEFINES += QT_ON_JETSON
+DEFINES += RK3588
 ```
 
 # Environment Setup
@@ -29,6 +31,9 @@ __Windows__
 
 __ARM__
 
-- For ARM embedded system it depends on which platform but this page [QT on Embedded](https://github.com/Yalee104/QtOnEmbedded) provides instruction for cross compilation for some embedded system.
-- OpenCV 4.x, this is required for some analytic application although it will be optional in the future, for install instruction please follow Linux guide.
-
+- __General__
+    - For ARM embedded system it depends on which platform but this page [QT on Embedded](https://github.com/Yalee104/QtOnEmbedded) provides instruction for cross compilation for some embedded system.
+    - OpenCV 4.x, this is required for some analytic application although it will be optional in the future, for install instruction please follow Linux guide.
+- __RK3588__
+    - If your target platform is RK3588 simply install the dependencies from Installs/RK3588/QTInstall.txt
+    
