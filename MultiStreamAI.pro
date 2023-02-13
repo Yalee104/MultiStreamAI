@@ -13,6 +13,7 @@ SOURCES += \
     Apps/FaceRecognition/faceRecognition.cpp \
     Apps/FaceRecognition/yolov5_faceDet_process.cpp \
     Apps/ObjectDetection/objectdetection.cpp \
+    Apps/ObjectDetection/yolov7_process.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
     Utils/database/FaceDatabase.cpp \
@@ -32,6 +33,7 @@ HEADERS += \
     Apps/FaceRecognition/faceRecognition.h \
     Apps/FaceRecognition/yolov5_faceDet_process.h \
     Apps/ObjectDetection/objectdetection.h \
+    Apps/ObjectDetection/yolov7_process.h \
     Apps/appbaseclass.h \
     Apps/appcommon.h \
     Apps/appmanager.h \
@@ -69,8 +71,10 @@ INCLUDEPATH += $$PWD/Utils/xtl-master/include
 FORMS += \
     mainwindow.ui
 
-# Project Defines
+# Project Defines (Enable one only)
+DEFINES += x86
 # DEFINES += QT_ON_JETSON
+# DEFINES += QT_ON_RK3588
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

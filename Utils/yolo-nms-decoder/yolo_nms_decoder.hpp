@@ -314,6 +314,63 @@ public:
 };
 
 
+
+template <class T>
+class Yolov7NmsDecoder : public YoloNmsDecoder <T> {
+
+    bool        bActivationIsSigmoid = false;
+
+    float sigmoid(float x) {
+        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
+        return 1.0f / (1.0f + expf(-x));
+    }
+
+    //Override parent
+    float output_data_trasnform(float data) {
+
+        if (this->bActivationIsSigmoid)
+            return data;
+
+        return sigmoid(data);
+
+    }
+
+public:
+
+    Yolov7NmsDecoder(bool bSigmoidActivation) {
+        this->bActivationIsSigmoid = bSigmoidActivation;
+    }
+
+    //Override parent
+    DecodedBox box_decode(  std::vector<T> &fm, int fm_offset,
+                            std::vector<int> &Anchors, int anchor_index, QunatizationInfo &q_info,
+                            int feature_map_size_row, int feature_map_size_col, int chosen_col, int chosen_row) {
+
+        int isRawData = (typeid(uint8_t).name() == typeid(fm[fm_offset]).name());
+
+        DecodedBox DBox;
+        // box centers
+        float x = (isRawData) ? this->dequantize(fm[fm_offset], q_info) : fm[fm_offset];
+        DBox.x = (this->output_data_trasnform(x) * 2.0f - 0.5f + chosen_col) / feature_map_size_col;
+
+        float y = (isRawData) ? this->dequantize(fm[fm_offset + 1], q_info) : fm[fm_offset + 1];
+        DBox.y = (this->output_data_trasnform(y) * 2.0f - 0.5f +  chosen_row) / feature_map_size_row;
+
+        // box scales
+        float w = (isRawData) ? this->dequantize(fm[fm_offset + 2], q_info) : fm[fm_offset + 2];
+        w = this->output_data_trasnform(w);
+        DBox.w = pow(2.0f * w, 2.0f) * Anchors[anchor_index * 2] / this->getImageWidth();
+
+        float h = (isRawData) ? this->dequantize(fm[fm_offset + 3], q_info) : fm[fm_offset + 3];
+        h = this->output_data_trasnform(h);
+        DBox.h = pow(2.0f * h, 2.0f) * Anchors[anchor_index * 2 + 1] / this->getImageHeight();
+
+        return DBox;
+    }
+
+};
+
+
 template <class T>
 class Yolov4NmsDecoder : public YoloNmsDecoder <T> {
 

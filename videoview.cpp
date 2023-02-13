@@ -51,7 +51,7 @@ void VideoView::ViewMenu_ChoseVideoSource()
     fileDialog.setWindowTitle(tr("Open Movie"));
     fileDialog.setDirectory(QStandardPaths::standardLocations(QStandardPaths::MoviesLocation).value(0, QDir::homePath()));
 
-#ifdef QT_ON_JETSON
+#if defined(QT_ON_JETSON) || defined(QT_ON_RK3588)
     //For now we only support few file format h.264
     fileDialog.setNameFilter("*.mp4");
 #endif
@@ -160,8 +160,35 @@ void VideoView::loadSource(const QUrl &url)
     }
 
     m_MediaPlayer.setMedia(QUrl(gstpipe));
+
+#elif QT_ON_RK3588
+
+    QString gstpipe;
+    QString scheme = url.scheme();
+
+    if (scheme == tr("file")) {
+        //m_MediaPlayer.setMedia(QUrl("gst-pipeline: videotestsrc ! qtvideosink"));
+        gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! queue leaky=no max-size-buffers=5 ! h264parse ! mppvideodec ! video/x-raw ! queue leaky=no max-size-buffers=5 ! videoconvert ! queue leaky=no max-size-buffers=5 ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
+        //gstpipe = QString("gst-pipeline: filesrc location=/%1 ! qtdemux ! queue ! h264parse ! mppvideodec ! video/x-raw ! videoconvert ! qtvideosink").arg(url.path(QUrl::FullyEncoded));
+
+    }
+    else if (scheme == tr("rtsp")) {
+        //gstpipe = QString("gst-pipeline: rtspsrc location=%1://%2%3 ! rtph264depay ! queue ! h264parse ! mppvideodec ! videoconvert ! qtvideosink").arg(scheme, url.authority(QUrl::FullyEncoded), url.path(QUrl::FullyEncoded));
+        gstpipe = QString("gst-pipeline: rtspsrc location=%1 ! rtph264depay ! queue ! h264parse ! mppvideodec ! videoconvert ! qtvideosink").arg(url.toString(QUrl::FullyEncoded));
+        qDebug() << gstpipe;
+    }
+    else {
+        QMessageBox msgBox;
+        msgBox.setText("Unsupported media resource.");
+        msgBox.exec();
+    }
+
+    m_MediaPlayer.setMedia(QUrl(gstpipe));
+
 #else
+
     m_MediaPlayer.setMedia(url);
+
 #endif
 
     m_MediaPlayer.setPlaybackRate(1.0);

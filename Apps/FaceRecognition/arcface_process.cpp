@@ -120,7 +120,6 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
             //pInitData->ImageInputRaw.resize(pInitData->NetworkInputSize, 0);
 
             pHailoPipeline->Infer(pInitData->ModelID, pInitData->ImageInputRaw, pInitData->AppID);
-            TotalInfer++;
 
             InferedIndex.push_back(i);
         }

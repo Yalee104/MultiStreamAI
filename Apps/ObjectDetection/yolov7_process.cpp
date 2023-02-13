@@ -1,19 +1,19 @@
-#include "yolov5_process.h"
+#include "yolov7_process.h"
 
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void yolov7_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
-int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
+int Yolov7_Initialize(ObjectDetectionInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     stNetworkModelInfo Network;
-    Network.id_name = std::string("yolov5m").append(AppID);
-    Network.hef_path = "yolov5m.hef";
-    Network.output_order_by_name = std::vector<std::string>({"conv107", "conv97", "conv87"});
+    Network.id_name = std::string("yolov7").append(AppID);
+    Network.hef_path = "yolov7_tiny_500fps.hef";
+    Network.output_order_by_name = std::vector<std::string>({"yolov7_tiny/conv58", "yolov7_tiny/conv51", "yolov7_tiny/conv43"});
     Network.batch_size = 1;
     Network.in_quantized = false;
     Network.in_format = HAILO_FORMAT_TYPE_UINT8;
@@ -36,7 +36,7 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
 }
 
 
-void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov7_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -72,9 +72,8 @@ void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 }
 
 
-void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov7_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
-    //qDebug() << "Yolov5mReadOutput";
 
     Timer   TimerCheck;
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
@@ -91,13 +90,13 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
         //timer.start();
 
-        pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
+        pData->DecodedResult = Yolov7_Decode(pInfo, pInfo->OutputBufferUint8);
         //qDebug() << "output readed at " << timer.nsecsElapsed();
         //qDebug() << "decoded result: " << pData->DecodedResult.size();
     }
 }
 
-void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov7_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
@@ -127,45 +126,45 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     qPainter.end();
 
-    //yolov5_print_output_result(pInfo, totalDetections, pData->DecodedResult);
+    //yolov7_print_output_result(pInfo, totalDetections, pData->DecodedResult);
 
 }
 
 
-std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov7_Decode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
 
     static bool Initialized = false;
-    static Yolov5NmsDecoder<uint8_t> Yolov5Decoder(true);
-    static std::vector<int> anchors1 {116, 90, 156, 198, 373, 326};
-    static std::vector<int> anchors2 {30,  61, 62,  45,  59,  119};
-    static std::vector<int> anchors3 {10,  13, 16,  30,  33,  23};
+    static Yolov7NmsDecoder<uint8_t> Yolov7Decoder(true);
+    static std::vector<int> anchors1 {142, 110, 192, 243, 459, 401};
+    static std::vector<int> anchors2 {36,  75, 76,  55,  72,  146};
+    static std::vector<int> anchors3 {12,  16, 19,  36,  40,  28};
 
     if (Initialized == false) {
 
         QunatizationInfo quantInfo;
-        Yolov5Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, TOTAL_CLASS, CONFIDENCE_THRS);
+        Yolov7Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, YOLOV7_TOTAL_CLASS, YOLOV7_CONFIDENCE_THRS);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[0].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[0].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE1, FEATURE_MAP_SIZE1, anchors1, &quantInfo);
+        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE1, YOLOV7_FEATURE_MAP_SIZE1, anchors1, &quantInfo);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[1].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[1].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE2, FEATURE_MAP_SIZE2, anchors2, &quantInfo);
+        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE2, YOLOV7_FEATURE_MAP_SIZE2, anchors2, &quantInfo);
 
         quantInfo.qp_scale = pInitData->QuantizationInfo[2].qp_scale;
         quantInfo.qp_zp = pInitData->QuantizationInfo[2].qp_zp;
-        Yolov5Decoder.YoloAddOutput(FEATURE_MAP_SIZE3, FEATURE_MAP_SIZE3, anchors3, &quantInfo);
+        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE3, YOLOV7_FEATURE_MAP_SIZE3, anchors3, &quantInfo);
 
         Initialized = true;
     }
 
-    return Yolov5Decoder.decode(OutputForDecode[0], OutputForDecode[1], OutputForDecode[2]);
+    return Yolov7Decoder.decode(OutputForDecode[0], OutputForDecode[1], OutputForDecode[2]);
 }
 
 
-std::string get_coco_name_from_int(int cls)
+std::string yolov7_get_coco_name_from_int(int cls)
 {
     std::string result = "N/A";
     switch(cls) {
@@ -254,7 +253,7 @@ std::string get_coco_name_from_int(int cls)
     return result;
 }
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void yolov7_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -262,7 +261,7 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
     if (total_detection > 0) {
         debug1 << "-I- Num detections: " << total_detection << " Classes: [";
         for (size_t i = 0; i < total_detection;i++)
-            debug1 << get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
+            debug1 << yolov7_get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
         debug1 << "]";
 
         //Show Detail Text Outputs
@@ -290,7 +289,7 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
 
 }
 
-int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData) {
+int Yolov7_ShareDataCleanUp(ObjectDetectionData* pShareData) {
     //qDebug() << "Yolov5mShareDataCleanUp";
 
     delete pShareData;

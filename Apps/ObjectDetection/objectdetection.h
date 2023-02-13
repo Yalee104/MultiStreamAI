@@ -6,6 +6,8 @@
 #include <QQueue>
 #include "Apps/appbaseclass.h"
 #include "Apps/ObjectDetection/yolov5_process.h"
+#include "Apps/ObjectDetection/yolov7_process.h"
+
 
 class ObjectDetection : public AppBaseClass
 {

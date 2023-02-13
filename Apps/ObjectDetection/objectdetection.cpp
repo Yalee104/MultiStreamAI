@@ -6,6 +6,25 @@
 
 #define APP_NAME    "Object Detection"
 
+//Select Network Model, Picke only one (TODO: will revise to be able to pick dynamically from App as selection list)
+//#define USE_YOLOV5
+#define USE_YOLOV7
+
+
+#ifdef USE_YOLOV5
+#define DETECTION_MODEL_INIT(ObjDetInfo, AppID)                 Yolov5mInitialize(ObjDetInfo, AppID)
+#define DETECTION_MODEL_INFER_WORKER(ObjDetInfo, Data)          InferWorker(ObjDetInfo, Data)
+#define DETECTION_MODEL_READ_OUTPUT_WORKER(ObjDetInfo, Data)    ReadOutputWorker(ObjDetInfo, Data)
+#define DETECTION_MODEL_VISUALIZE_WORKER(ObjDetInfo, Data)      VisualizeWorker(ObjDetInfo, Data)
+#endif
+
+#ifdef USE_YOLOV7
+#define DETECTION_MODEL_INIT(ObjDetInfo, AppID)                 Yolov7_Initialize(ObjDetInfo, AppID)
+#define DETECTION_MODEL_INFER_WORKER(ObjDetInfo, Data)          Yolov7_InferWorker(ObjDetInfo, Data)
+#define DETECTION_MODEL_READ_OUTPUT_WORKER(ObjDetInfo, Data)    Yolov7_ReadOutputWorker(ObjDetInfo, Data)
+#define DETECTION_MODEL_VISUALIZE_WORKER(ObjDetInfo, Data)      Yolov7_VisualizeWorker(ObjDetInfo, Data)
+#endif
+
 ObjectDetection::ObjectDetection(QObject *parent)
     : AppBaseClass(parent)
 {
@@ -55,7 +74,7 @@ void ObjectDetection::run()
 
     pObjDetInfo = new ObjectDetectionInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
-    Yolov5mInitialize(pObjDetInfo, this->m_AppID.toStdString());
+    DETECTION_MODEL_INIT(pObjDetInfo, this->m_AppID.toStdString());
 
     TimerFPS.reset();
     while (!m_Terminate) {
@@ -76,15 +95,15 @@ void ObjectDetection::run()
 
             //qDebug() << "1 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            InferWorker(pObjDetInfo, pData);
+            DETECTION_MODEL_INFER_WORKER(pObjDetInfo, pData);
 
             //qDebug() << "2 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            ReadOutputWorker(pObjDetInfo, pData);
+            DETECTION_MODEL_READ_OUTPUT_WORKER(pObjDetInfo, pData);
 
             //qDebug() << "3 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            VisualizeWorker(pObjDetInfo, pData);
+            DETECTION_MODEL_VISUALIZE_WORKER(pObjDetInfo, pData);
 
             //qDebug() << "4 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
