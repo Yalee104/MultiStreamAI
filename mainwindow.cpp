@@ -109,6 +109,14 @@ void MainWindow::PlacementStreamViewRefreshAll()
     }
 }
 
+void MainWindow::PlacementStreamViewRemoveAll()
+{
+    QList<QString> StreamViewIDList = m_streamContainer.GetAllStreamViewID();
+    for (QString ID : StreamViewIDList) {
+        PlacementStreamViewRemove(ID);
+    }
+}
+
 void MainWindow::PlacementStreamViewRemove(QString ID)
 {
     StreamView* pStreamView = m_streamContainer.GetStreamViewByID(ID);
@@ -117,14 +125,17 @@ void MainWindow::PlacementStreamViewRemove(QString ID)
     PlacementStreamViewRefreshAll();
 }
 
-void MainWindow::PlacementStreamViewAddNew(QString ID, eStreamViewType StreamType)
+StreamView*  MainWindow::PlacementStreamViewAddNew(QString ID, eStreamViewType StreamType)
 {
+    StreamView* pStreamView = nullptr;
     if (m_streamContainer.StreamList.size() < MAX_NUM_SUPPORTED_STREAM_VIEW) {
-        StreamView* pStreamView = m_streamContainer.CreateNewStream(ID, StreamType);
+        pStreamView = m_streamContainer.CreateNewStream(ID, StreamType);
         connect(pStreamView, SIGNAL(stremViewWantsDeleteEvent(QString)), this, SLOT(PlacementStreamViewRemove(QString)));
         PlacementStreamViewRefreshAll();
         m_streamContainer.UpdateTargetFPSToAllStream(m_GlobalTargetFPS);
     }
+
+    return pStreamView;
 }
 
 int MainWindow::GetSuggestedTotalRowCol(int totalIndex)
@@ -164,17 +175,21 @@ void MainWindow::handleContainerViewUpdateRequest(QString ID, eStreamViewUpdate 
 }
 
 
-void MainWindow::on_actionCamera_triggered()
+StreamView* MainWindow::on_actionCamera_triggered()
 {
-    PlacementStreamViewAddNew(QString::number(m_uniqueID), eStreamViewType::CAMERA);
+    StreamView* pStreamView = nullptr;
+    pStreamView = PlacementStreamViewAddNew(QString::number(m_uniqueID), eStreamViewType::CAMERA);
     m_uniqueID++;
+    return pStreamView;
 }
 
 
-void MainWindow::on_actionVideo_triggered()
+StreamView* MainWindow::on_actionVideo_triggered()
 {
-    PlacementStreamViewAddNew(QString::number(m_uniqueID), eStreamViewType::VIDEO);
+    StreamView* pStreamView = nullptr;
+    pStreamView = PlacementStreamViewAddNew(QString::number(m_uniqueID), eStreamViewType::VIDEO);
     m_uniqueID++;
+    return pStreamView;
 }
 
 
@@ -210,4 +225,71 @@ void MainWindow::on_actionStreamFPS_5_triggered()
     m_GlobalTargetFPS = 5;
 }
 
+
+void MainWindow::on_actionSave_Stream_Config_triggered()
+{
+    bool ok;
+    QString ConfigFileName = QInputDialog::getText(this, tr(""),
+                                         tr("Config Name to Save"), QLineEdit::Normal,
+                                         tr(""), &ok);
+    if (ok) {
+
+        if (!ConfigFileName.isEmpty()) {
+            ConfigFileName.append(".json");
+            m_streamContainer.SaveStreamInfoToFile(ConfigFileName);
+        }
+        else {
+            QMessageBox msgBox;
+            msgBox.setText("File name cannot be empty");
+            msgBox.exec();
+        }
+
+    }
+}
+
+void MainWindow::on_actionLoad_Stream_Config_triggered()
+{
+
+    QFileDialog fileDialog(this);
+    fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
+    fileDialog.setWindowTitle(tr("Open Config File"));
+    fileDialog.setNameFilter("*.json");
+
+    if (fileDialog.exec() == QDialog::Accepted) {
+
+        PlacementStreamViewRemoveAll();
+
+        QString FilePath = fileDialog.selectedUrls().constFirst().path();
+        QFile loadFile(FilePath);
+
+        if (loadFile.open(QIODevice::ReadOnly)) {
+
+            QByteArray saveData = loadFile.readAll();
+
+            QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+
+            QJsonObject Streams = loadDoc.object();
+
+            if (Streams.contains("StreamDescriptor") && Streams["StreamDescriptor"].isArray()) {
+
+                QJsonArray StreamDescriptorList = Streams["StreamDescriptor"].toArray();
+                for (int i = 0; i < StreamDescriptorList.size(); ++i) {
+                    QJsonObject StreamObj = StreamDescriptorList[i].toObject();
+                    if (StreamObj["Type"].toString().compare("Video") == 0) {
+                        StreamView* pStreamView = on_actionVideo_triggered();
+                        m_streamContainer.ConfigStream(pStreamView, StreamObj);
+                    }
+
+                    if (StreamObj["Type"].toString().compare("Camera") == 0) {
+                        StreamView* pStreamView = on_actionCamera_triggered();
+                        m_streamContainer.ConfigStream(pStreamView, StreamObj);
+                    }
+                }
+            }
+        }
+        else {
+            qWarning("Couldn't open save file.");
+        }
+    }
+}
 

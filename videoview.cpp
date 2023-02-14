@@ -29,6 +29,11 @@ VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewS
     QObject::connect(&m_AppManager, SIGNAL(sendImage(QImage, QList<QGraphicsItem*>)), this, SLOT(UpdateImageToView(QImage,QList<QGraphicsItem*>)));
 }
 
+QString VideoView::GetSelectedAppName()
+{
+    return m_AppManager.GetSelectedAppName();
+}
+
 void VideoView::changeTargetFPS(int FPS)
 {
     m_AppManager.AppLimitFPS(FPS);
@@ -191,8 +196,16 @@ void VideoView::loadSource(const QUrl &url)
 
 #endif
 
+    m_SelectedMediaUrl = url;
     m_MediaPlayer.setPlaybackRate(1.0);
 }
+
+
+void VideoView::SelectApp(QString AppName)
+{
+    m_AppManager.LaunchApp(AppName);
+}
+
 
 void VideoView::mousePressEvent(QMouseEvent * e)
 {

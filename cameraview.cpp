@@ -31,6 +31,17 @@ CameraView::~CameraView()
     ReleaseCamera();
 }
 
+QString CameraView::GetSelectedAppName()
+{
+    return m_AppManager.GetSelectedAppName();
+}
+
+void CameraView::SelectApp(QString AppName)
+{
+    m_AppManager.LaunchApp(AppName);
+}
+
+
 void CameraView::changeTargetFPS(int FPS)
 {
     m_AppManager.AppLimitFPS(FPS);
@@ -84,6 +95,14 @@ QString CameraView::pixelFormatToString(QVideoFrame::PixelFormat pixelformatvalu
 }
 
 
+const QCameraViewfinderSettings CameraView::getCameraViewFinderSettings()
+{
+    if (m_pCamera == nullptr)
+        return QCameraViewfinderSettings();
+
+    return m_pCamera->viewfinderSettings();
+}
+
 void CameraView::UpdateImageToView(const QImage &frame, const QList<QGraphicsItem*> &overlayItems)
 {
     if (overlayItems.size())
@@ -101,19 +120,30 @@ void CameraView::mousePressEvent(QMouseEvent * e)
     }
 }
 
+void CameraView::StartCamera(QString CameraDeviceName, bool ImageInverted)
+{
+    ReleaseCamera();
+
+    m_pCamera = new QCamera(CameraDeviceName.toUtf8());
+
+    m_CameraUniqueDeviceName = CameraDeviceName;
+    m_MediaStream.setMirror(ImageInverted);
+    m_pCamera->setViewfinder(&m_MediaStream);
+    connect(m_pCamera, SIGNAL(statusChanged(QCamera::Status)), this, SLOT(CameraStatusChanged(QCamera::Status)));
+    m_pCamera->start();
+}
+
 
 void CameraView::CameraSelectionTrigger(QAction *action)
 {
+    StartCamera(action->data().toString(), true);
+}
 
-    ReleaseCamera();
+void CameraView::ConfigCameraView(QCameraViewfinderSettings ViewSettings)
+{
+    m_pCamera->setViewfinderSettings(ViewSettings);
 
-    m_pCamera = new QCamera(action->data().toString().toUtf8());
-
-    m_MediaStream.setMirror(true);
-    m_pCamera->setViewfinder(&m_MediaStream);
-    m_CameraUniqueDeviceName = action->data().toString();
-    connect(m_pCamera, SIGNAL(statusChanged(QCamera::Status)), this, SLOT(CameraStatusChanged(QCamera::Status)));
-    m_pCamera->start();
+    qDebug() << "My Resolution: " << ViewSettings.resolution() << " FPS: " << ViewSettings.maximumFrameRate() << "Pixel Format: " << ViewSettings.pixelFormat();
 
 }
 
@@ -121,10 +151,7 @@ void CameraView::CameraResSelectionTrigger(QAction *action)
 {
     QVariant v = action->data();
     QCameraViewfinderSettings mysetting = (QCameraViewfinderSettings) v.value<QCameraViewfinderSettings>();
-
-    m_pCamera->setViewfinderSettings(mysetting);
-
-    qDebug() << "My Resolution: " << mysetting.resolution() << " FPS: " << mysetting.maximumFrameRate() << "Pixel Format: " << mysetting.pixelFormat();
+    ConfigCameraView(mysetting);
 }
 
 void CameraView::CameraStatusChanged(QCamera::Status status)
@@ -142,6 +169,7 @@ void CameraView::CameraStatusChanged(QCamera::Status status)
 void CameraView::CameraInvertImage(bool isChecked)
 {
     m_MediaStream.setMirror(isChecked);
+    m_InvertImage = isChecked;
 }
 
 
@@ -176,7 +204,8 @@ void CameraView::buildViewMenu()
         //Allow User to invert camera image as on some camera it appear upside down
         QAction *pInvertImage = m_ViewMenu.addAction("Invert Image", this, SLOT(CameraInvertImage(bool)));
         pInvertImage->setCheckable(true);
-        pInvertImage->setChecked(m_MediaStream.Mirror());
+        m_InvertImage = m_MediaStream.Mirror();
+        pInvertImage->setChecked(m_InvertImage);
 
         //Enable/Disable item as necessary base on curent camera state
         QCamera::State CurrentState = m_pCamera->state();

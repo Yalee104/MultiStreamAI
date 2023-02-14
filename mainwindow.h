@@ -5,6 +5,10 @@
 #include <QGraphicsView>
 #include <QGridLayout>
 #include <QString>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QInputDialog>
+#include <QMessageBox>
 #include "streamcontainer.h"
 
 #define MAX_NUM_SUPPORTED_STREAM_VIEW (16)
@@ -24,7 +28,7 @@ public:
     ~MainWindow();
 
     void PlacementStreamViewRefreshAll();
-    void PlacementStreamViewAddNew(QString ID, eStreamViewType StreamType);
+    StreamView*  PlacementStreamViewAddNew(QString ID, eStreamViewType StreamType);
 
     void SetGlobalStreamFPSMenu(eStreamFPS FPS);
 
@@ -34,14 +38,15 @@ protected:
 
 private slots:
 
+    void PlacementStreamViewRemoveAll();
     void PlacementStreamViewRemove(QString ID);
 
     void handleContainerViewUpdateRequest(QString ID, eStreamViewUpdate Request);
 
 
-    void on_actionCamera_triggered();
+    StreamView* on_actionCamera_triggered();
 
-    void on_actionVideo_triggered();
+    StreamView* on_actionVideo_triggered();
 
     void on_actionStreamFPS_Default_triggered();
 
@@ -52,6 +57,10 @@ private slots:
     void on_actionStreamFPS_5_triggered();
 
     void on_actionStreamFPS_20_triggered();
+
+    void on_actionSave_Stream_Config_triggered();
+
+    void on_actionLoad_Stream_Config_triggered();
 
 private:
     Ui::MainWindow  *ui;

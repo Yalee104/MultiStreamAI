@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>844</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuView">
@@ -48,8 +48,16 @@
     <addaction name="actionStreamFPS_10"/>
     <addaction name="actionStreamFPS_5"/>
    </widget>
+   <widget class="QMenu" name="menuFIle">
+    <property name="title">
+     <string>FIle</string>
+    </property>
+    <addaction name="actionSave_Stream_Config"/>
+    <addaction name="actionLoad_Stream_Config"/>
+   </widget>
    <addaction name="menuView"/>
    <addaction name="menuFPS"/>
+   <addaction name="menuFIle"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionRemove_View">
@@ -77,7 +85,8 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="accessories-calculator"/>
+    <iconset theme="accessories-calculator">
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Default</string>
@@ -113,6 +122,16 @@
    </property>
    <property name="text">
     <string>20</string>
+   </property>
+  </action>
+  <action name="actionSave_Stream_Config">
+   <property name="text">
+    <string>Save Stream Config</string>
+   </property>
+  </action>
+  <action name="actionLoad_Stream_Config">
+   <property name="text">
+    <string>Load Stream Config</string>
    </property>
   </action>
  </widget>

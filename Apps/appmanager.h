@@ -14,14 +14,17 @@ public:
     explicit AppManager(QObject *parent = nullptr);
     ~AppManager();
 
-    QMenu *getAppMenu();
-    bool  AppSelected();
+    QString GetSelectedAppName();
+    QMenu   *getAppMenu();
+    bool    AppSelected();
 
-    void  AppImageInfer(const QImage& frame);
+    void    LaunchApp(QString AppName);
+    void    AppImageInfer(const QImage& frame);
 
-    void  AppLimitFPS(int FPS);
+    void    AppLimitFPS(int FPS);
 
 private:
+    void  StartApp(QByteArray AppClass);
     void  ReGenerateMenu();
     void  ReleaseCurrentApp();
     void  ReleaseAppMenu();
@@ -39,9 +42,10 @@ public:
 protected:
 
     QMenu*          m_pAppMenu = nullptr;
-    AppBaseClass*   m_pAppRunnableObject = nullptr;
     AppsFactory     m_AppsFactory;
     QMutex          m_AppAccessMutex;
+    AppBaseClass*   m_pAppRunnableObject = nullptr;
+
 };
 
 #endif // APPMANAGER_H

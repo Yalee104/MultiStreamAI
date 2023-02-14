@@ -15,7 +15,9 @@ public:
     VideoView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     void loadSource(const QUrl &url);
 
-    void changeTargetFPS(int FPS) override;
+    void        SelectApp(QString AppName);
+    QString     GetSelectedAppName();
+    void        changeTargetFPS(int FPS) override;
 
 signals:
     Q_INVOKABLE void sendMouseEvent(QMouseEvent * e, QString ID);
@@ -34,6 +36,7 @@ protected:
 
 public:
     bool            m_Loop = true;
+    QUrl            m_SelectedMediaUrl;
 
 protected:
     QMenu           m_ViewMenu;

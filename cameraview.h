@@ -17,9 +17,14 @@ public:
     CameraView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     ~CameraView();
 
-    void changeTargetFPS(int FPS) override;
+    void        StartCamera(QString CameraDeviceName, bool ImageInverted);
+    void        ConfigCameraView(QCameraViewfinderSettings ViewSettings);
+    QString     GetSelectedAppName();
+    void        SelectApp(QString AppName);
+    void        changeTargetFPS(int FPS) override;
 
     QString pixelFormatToString( QVideoFrame::PixelFormat pixelformatvalue );
+    const QCameraViewfinderSettings getCameraViewFinderSettings();
 
 signals:
     Q_INVOKABLE void sendMouseEvent(QMouseEvent * e, QString ID);
@@ -40,13 +45,15 @@ protected:
 
 public:
     bool            m_Loop = true;
+    bool            m_InvertImage = false;
+    QString         m_CameraUniqueDeviceName = nullptr;
 
 protected:
     QMenu           m_ViewMenu;
     QCamera*        m_pCamera = nullptr;
     MediaStream     m_MediaStream;
-    QString         m_CameraUniqueDeviceName;
     AppManager      m_AppManager;
+
 };
 
 #endif // CAMERAVIEW_H

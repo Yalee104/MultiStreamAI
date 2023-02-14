@@ -22,6 +22,55 @@ AppManager::~AppManager()
 
 }
 
+QString AppManager::GetSelectedAppName()
+{
+    QString AppName = "";
+    if (m_pAppRunnableObject != nullptr) {
+        AppName = m_pAppRunnableObject->GetAppName();
+    }
+
+    return AppName;
+}
+
+
+void  AppManager::StartApp(QByteArray AppClass)
+{
+    // If the threadpool maximum allowed thread is low we need to increase the number otherwise it will creash the app
+    // TODO: Alternatively we can also limit this to prevent application adding too much of stream
+    int CurrentActiveThreadCount = QThreadPool::globalInstance()->activeThreadCount();
+    int MaximumAvailableThreadCount = QThreadPool::globalInstance()->maxThreadCount();
+    //qDebug() << CurrentActiveThreadCount;
+    //qDebug() << MaximumAvailableThreadCount;
+    if (CurrentActiveThreadCount+1 >=  MaximumAvailableThreadCount)
+        QThreadPool::globalInstance()->setMaxThreadCount(MaximumAvailableThreadCount+2);
+
+    //Selected App and Start it in thread pool
+    m_pAppRunnableObject = dynamic_cast<AppBaseClass*>(m_AppsFactory.createObject(AppClass));
+    m_pAppRunnableObject->m_AppID = this->m_AppID;
+    QThreadPool::globalInstance()->start(m_pAppRunnableObject);
+    //Redirect the signal of App result image to AppManager sendImage signal
+
+    connect(m_pAppRunnableObject, SIGNAL(sendAppResultImage(QImage, QList<QGraphicsItem*>)), this, SIGNAL(sendImage(QImage, QList<QGraphicsItem*>)));
+
+}
+
+
+
+void AppManager::LaunchApp(QString AppName)
+{
+    if (AppName.compare(ObjectDetection::AppName()) == 0) {
+        QByteArray ClassName = m_AppsFactory.registerObject<ObjectDetection>();
+        StartApp(ClassName);
+    }
+
+    if (AppName.compare(FaceRecognition::AppName()) == 0) {
+        QByteArray ClassName = m_AppsFactory.registerObject<FaceRecognition>();
+        StartApp(ClassName);
+    }
+
+}
+
+
 void AppManager::ReGenerateMenu()
 {
     m_pAppMenu->clear();
@@ -47,7 +96,6 @@ void AppManager::ReGenerateMenu()
     //To add more Apps simply copy any of above register apps and make
     //necessary changes to reflect the added app class
     //TODO: ADD HERE
-
 
 
 
@@ -135,21 +183,6 @@ void AppManager::AppSelectionTrigger(QAction *action)
 
     ReleaseCurrentApp();
 
-    // If the threadpool maximum allowed thread is low we need to increase the number otherwise it will creash the app
-    // TODO: Alternatively we can also limit this to prevent application adding too much of stream
-    int CurrentActiveThreadCount = QThreadPool::globalInstance()->activeThreadCount();
-    int MaximumAvailableThreadCount = QThreadPool::globalInstance()->maxThreadCount();
-    //qDebug() << CurrentActiveThreadCount;
-    //qDebug() << MaximumAvailableThreadCount;
-    if (CurrentActiveThreadCount+1 >=  MaximumAvailableThreadCount)
-        QThreadPool::globalInstance()->setMaxThreadCount(MaximumAvailableThreadCount+2);
-
-    //Selected App and Start it in thread pool
-    m_pAppRunnableObject = dynamic_cast<AppBaseClass*>(m_AppsFactory.createObject(action->data().toByteArray()));
-    m_pAppRunnableObject->m_AppID = this->m_AppID;
-    QThreadPool::globalInstance()->start(m_pAppRunnableObject);
-    //Redirect the signal of App result image to AppManager sendImage signal
-
-    connect(m_pAppRunnableObject, SIGNAL(sendAppResultImage(QImage, QList<QGraphicsItem*>)), this, SIGNAL(sendImage(QImage, QList<QGraphicsItem*>)));
+    StartApp(action->data().toByteArray());
 
 }
