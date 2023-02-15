@@ -36,4 +36,8 @@ __ARM__
     - OpenCV 4.x, this is required for some analytic application although it will be optional in the future, for install instruction please follow Linux guide.
 - __RK3588__
     - If your target platform is RK3588 simply install the dependencies from Installs/RK3588/QTInstall.txt
+- __Others__
+    - IMPORTANT: On linux you may find performance issue or image distorsion when you try to open more than 10 (or less) stream on embedded systems. This is mostlikely caused by insufficient number of available soft files. You should add at least 2048.
+        - It can be added by adding this line "* soft nofile 2048" in limit.conf and reboot the system.
+
     
