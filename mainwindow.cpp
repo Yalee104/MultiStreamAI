@@ -270,20 +270,20 @@ void MainWindow::on_actionLoad_Stream_Config_triggered()
 
             QJsonObject Streams = loadDoc.object();
 
-            if (Streams.contains("StreamDescriptor") && Streams["StreamDescriptor"].isArray()) {
+            QJsonArray  StreamDescriptorList = m_streamContainer.GetStreamDescriptorListFromJson(Streams);
 
-                QJsonArray StreamDescriptorList = Streams["StreamDescriptor"].toArray();
-                for (int i = 0; i < StreamDescriptorList.size(); ++i) {
-                    QJsonObject StreamObj = StreamDescriptorList[i].toObject();
-                    if (StreamObj["Type"].toString().compare("Video") == 0) {
-                        StreamView* pStreamView = on_actionVideo_triggered();
-                        m_streamContainer.ConfigStream(pStreamView, StreamObj);
-                    }
+            for (auto StreamJsonValue : StreamDescriptorList) {
 
-                    if (StreamObj["Type"].toString().compare("Camera") == 0) {
-                        StreamView* pStreamView = on_actionCamera_triggered();
-                        m_streamContainer.ConfigStream(pStreamView, StreamObj);
-                    }
+                eStreamViewType StreamType = m_streamContainer.GetStreamViewType(StreamJsonValue);
+
+                if (StreamType == eStreamViewType::VIDEO) {
+                    StreamView* pStreamView = on_actionVideo_triggered();
+                    m_streamContainer.ConfigStream(pStreamView, StreamJsonValue);
+                }
+
+                if (StreamType == eStreamViewType::CAMERA) {
+                    StreamView* pStreamView = on_actionCamera_triggered();
+                    m_streamContainer.ConfigStream(pStreamView, StreamJsonValue);
                 }
             }
         }

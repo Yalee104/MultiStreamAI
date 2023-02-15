@@ -4,6 +4,23 @@
 #include "cameraview.h"
 #include "videoview.h"
 
+#define STREAM_JSON_KEY_STREAM_DESCRIPTOR       "StreamDescriptor"
+#define STREAM_JSON_KEY_TYPE                    "Type"
+#define STREAM_JSON_KEY_TYPE_VALUE_VIDEO        "Video"
+#define STREAM_JSON_KEY_TYPE_VALUE_CAMERA       "Camera"
+
+#define STREAN_JSON_KEY_VIDEO_URL               "Url"
+
+#define STREAM_JSON_KEY_CAMERA_DEVICE_ID            "CameraID"
+#define STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT    "ViewSetting_PixelFormat"
+#define STREAM_JSON_KEY_CAMERA_VIEW_WIDTH           "ViewSetting_Width"
+#define STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT          "ViewSetting_Height"
+#define STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS         "ViewSetting_MaxFPS"
+#define STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE    "InvertImage"
+
+#define STREAM_JSON_KEY_APP_NAME_SELECTED           "SelectedAppName"
+
+
 StreamContainer::StreamContainer(QObject *parent)
     : QObject{parent}
 {
@@ -16,15 +33,17 @@ StreamContainer::~StreamContainer()
         delete StreamList.takeFirst();
 }
 
-void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonObject &ConfigInfo)
+void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJsonConfigValue)
 {
+    QJsonObject ConfigInfo = StreamJsonConfigValue.toObject();
+
     if (dynamic_cast<const VideoView*>(pStreamView) != nullptr) {
         VideoView* pVideoView = dynamic_cast<VideoView*>(pStreamView);
 
         QJsonObject VideoJsonObj;
 
-        QString VideoUrl = ConfigInfo["Url"].toString();
-        QString SelectedAppName = ConfigInfo["SelectedAppName"].toString();
+        QString VideoUrl = ConfigInfo[STREAN_JSON_KEY_VIDEO_URL].toString();
+        QString SelectedAppName = ConfigInfo[STREAM_JSON_KEY_APP_NAME_SELECTED].toString();
 
         pVideoView->loadSource(QUrl(VideoUrl));
         pVideoView->SelectApp(SelectedAppName);
@@ -34,12 +53,12 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonObject &ConfigI
 
         CameraView* pCameraView = dynamic_cast<CameraView*>(pStreamView);
 
-        QString CameraDevice = ConfigInfo["CameraID"].toString();
-        int     CameraPixelFormat = ConfigInfo["ViewSetting_PixelFormat"].toInt();
-        int     CameraView_Width = ConfigInfo["ViewSetting_Width"].toInt();
-        int     CameraView_Heights = ConfigInfo["ViewSetting_Height"].toInt();
-        float   CameraView_MaxFPS = ConfigInfo["ViewSetting_MaxFPS"].toDouble();
-        bool    CameraView_InvertImage = ConfigInfo["InvertImage"].toBool();
+        QString CameraDevice = ConfigInfo[STREAM_JSON_KEY_CAMERA_DEVICE_ID].toString();
+        int     CameraPixelFormat = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT].toInt();
+        int     CameraView_Width = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_WIDTH].toInt();
+        int     CameraView_Heights = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT].toInt();
+        float   CameraView_MaxFPS = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS].toDouble();
+        bool    CameraView_InvertImage = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE].toBool();
 
         QVideoFrame::PixelFormat ePixelFormat = static_cast<QVideoFrame::PixelFormat>(CameraPixelFormat);
         QCameraViewfinderSettings CameraViewSetting;
@@ -50,11 +69,43 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonObject &ConfigI
         pCameraView->StartCamera(CameraDevice, CameraView_InvertImage);
         pCameraView->ConfigCameraView(CameraViewSetting);
 
-        QString SelectedAppName = ConfigInfo["SelectedAppName"].toString();
+        QString SelectedAppName = ConfigInfo[STREAM_JSON_KEY_APP_NAME_SELECTED].toString();
         pCameraView->SelectApp(SelectedAppName);
     }
 
 }
+
+
+QJsonArray StreamContainer::GetStreamDescriptorListFromJson(QJsonObject LoadedConfigJsonObj)
+{
+    QJsonArray StreamDescriptorList;
+
+    if (LoadedConfigJsonObj.contains(STREAM_JSON_KEY_STREAM_DESCRIPTOR) && LoadedConfigJsonObj[STREAM_JSON_KEY_STREAM_DESCRIPTOR].isArray()) {
+
+        StreamDescriptorList = LoadedConfigJsonObj[STREAM_JSON_KEY_STREAM_DESCRIPTOR].toArray();
+    }
+
+    return StreamDescriptorList;
+}
+
+
+eStreamViewType StreamContainer::GetStreamViewType(QJsonValue StreamJsonValue)
+{
+    eStreamViewType StreamType = eStreamViewType::UNKNOWN;
+
+    QJsonObject StreamObj = StreamJsonValue.toObject();
+
+    if (StreamObj[STREAM_JSON_KEY_TYPE].toString().compare(STREAM_JSON_KEY_TYPE_VALUE_VIDEO) == 0) {
+        StreamType = eStreamViewType::VIDEO;
+    }
+
+    if (StreamObj[STREAM_JSON_KEY_TYPE].toString().compare(STREAM_JSON_KEY_TYPE_VALUE_CAMERA) == 0) {
+        StreamType = eStreamViewType::CAMERA;
+    }
+
+    return StreamType;
+}
+
 
 void StreamContainer::SaveStreamInfoToFile(QString FileName)
 {
@@ -69,18 +120,18 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
             QJsonObject CameraJsonObj;
 
             if (pCameraView->m_CameraUniqueDeviceName != nullptr) {
-                CameraJsonObj["Type"] = "Camera";
+                CameraJsonObj[STREAM_JSON_KEY_TYPE] = STREAM_JSON_KEY_TYPE_VALUE_CAMERA;
 
-                CameraJsonObj["CameraID"] = pCameraView->m_CameraUniqueDeviceName;
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_DEVICE_ID] = pCameraView->m_CameraUniqueDeviceName;
 
                 const QCameraViewfinderSettings CameraViewSetting = pCameraView->getCameraViewFinderSettings();
-                CameraJsonObj["ViewSetting_PixelFormat"] = CameraViewSetting.pixelFormat();
-                CameraJsonObj["ViewSetting_Width"] = CameraViewSetting.resolution().rwidth();
-                CameraJsonObj["ViewSetting_Height"] = CameraViewSetting.resolution().rheight();
-                CameraJsonObj["ViewSetting_MaxFPS"] = CameraViewSetting.maximumFrameRate();
-                CameraJsonObj["InvertImage"] = pCameraView->m_InvertImage;
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT] = CameraViewSetting.pixelFormat();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_WIDTH] = CameraViewSetting.resolution().rwidth();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT] = CameraViewSetting.resolution().rheight();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS] = CameraViewSetting.maximumFrameRate();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE] = pCameraView->m_InvertImage;
 
-                CameraJsonObj["SelectedAppName"] = pCameraView->GetSelectedAppName();
+                CameraJsonObj[STREAM_JSON_KEY_APP_NAME_SELECTED] = pCameraView->GetSelectedAppName();
 
                 StreamDescriptor.append(CameraJsonObj);
             }
@@ -92,9 +143,9 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
 
             QString VideoUrl = pVideoView->m_SelectedMediaUrl.url();
             if (VideoUrl.size()) {
-                VideoJsonObj["Type"] = "Video";
-                VideoJsonObj["Url"] = VideoUrl;
-                VideoJsonObj["SelectedAppName"] = pVideoView->GetSelectedAppName();
+                VideoJsonObj[STREAM_JSON_KEY_TYPE] = STREAM_JSON_KEY_TYPE_VALUE_VIDEO;
+                VideoJsonObj[STREAN_JSON_KEY_VIDEO_URL] = VideoUrl;
+                VideoJsonObj[STREAM_JSON_KEY_APP_NAME_SELECTED] = pVideoView->GetSelectedAppName();
 
                 StreamDescriptor.append(VideoJsonObj);
             }
@@ -103,7 +154,7 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
     }
 
     if (StreamDescriptor.count()) {
-        StreamInfo["StreamDescriptor"] = StreamDescriptor;
+        StreamInfo[STREAM_JSON_KEY_STREAM_DESCRIPTOR] = StreamDescriptor;
 
         QFile saveFile(FileName);
         if (!saveFile.open(QIODevice::WriteOnly)) {
