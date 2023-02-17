@@ -16,6 +16,7 @@ public:
     ~AppBaseClass();
 
     virtual     const QString   GetAppName() = 0;
+    virtual     const QString   GetSelectedNetwork();
     virtual     bool            AppContainSubMenu();
     virtual     QMenu*          GetAppSubMenu();
     virtual     void            ImageInfer(const QImage& frame) = 0;

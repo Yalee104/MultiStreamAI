@@ -15,7 +15,8 @@ public:
     VideoView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     void loadSource(const QUrl &url);
 
-    void        SelectApp(QString AppName);
+    void        SelectApp(QString AppName, QString NetworkName);
+    QString     GetSelectedNetworkName();
     QString     GetSelectedAppName();
     void        changeTargetFPS(int FPS) override;
 

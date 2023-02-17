@@ -32,6 +32,15 @@ QString AppManager::GetSelectedAppName()
     return AppName;
 }
 
+QString AppManager::GetSelectedNetworkName()
+{
+    QString AppName = "";
+    if (m_pAppRunnableObject != nullptr) {
+        AppName = m_pAppRunnableObject->GetSelectedNetwork();
+    }
+
+    return AppName;
+}
 
 void  AppManager::StartApp(QByteArray AppClass)
 {
@@ -56,11 +65,15 @@ void  AppManager::StartApp(QByteArray AppClass)
 
 
 
-void AppManager::LaunchApp(QString AppName)
+void AppManager::LaunchApp(QString AppName, QString NetworkName)
 {
     if (AppName.compare(ObjectDetection::AppName()) == 0) {
         QByteArray ClassName = m_AppsFactory.registerObject<ObjectDetection>();
         StartApp(ClassName);
+
+        ObjectDetection* pObjectDetection = dynamic_cast<ObjectDetection*>(m_pAppRunnableObject);
+        if (pObjectDetection)
+            pObjectDetection->SelectNetwork(NetworkName);
     }
 
     if (AppName.compare(FaceRecognition::AppName()) == 0) {

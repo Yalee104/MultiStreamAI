@@ -17,22 +17,33 @@ public:
     ~ObjectDetection();
     static const QString    AppName();
     const QString           GetAppName() override;
+    const QString           GetSelectedNetwork() override;
+    void                    SelectNetwork(QString NetworkName);
 
+    bool AppContainSubMenu() override;
+    QMenu* GetAppSubMenu() override;
 
     void ImageInfer(const QImage& frame) override;
     void run() Q_DECL_OVERRIDE;
+
+private:
+    int GetNetworkSelectionIndexMatchingName(QString NetworkName);
+
+public slots:
+    void NetworkSelectionChange(QAction *action);
 
 signals:
 
     void SendToInfer(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
 
 protected:
-
+    QMenu*                          pSubMenu = nullptr;
     ObjectDetectionInfo*            pObjDetInfo = nullptr;
     QMutex                          ResourceLock;
     bool                            bFrameInProcess = false;
     float                           FrameCount;
-
+    int                             SelectedNetworkMapping = 0;
+    int                             NewSelectedNetworkMapping = 0;
 };
 
 

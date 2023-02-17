@@ -15,10 +15,11 @@ public:
     ~AppManager();
 
     QString GetSelectedAppName();
+    QString GetSelectedNetworkName();
     QMenu   *getAppMenu();
     bool    AppSelected();
 
-    void    LaunchApp(QString AppName);
+    void    LaunchApp(QString AppName, QString NetworkName);
     void    AppImageInfer(const QImage& frame);
 
     void    AppLimitFPS(int FPS);

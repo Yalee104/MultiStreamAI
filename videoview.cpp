@@ -34,6 +34,11 @@ QString VideoView::GetSelectedAppName()
     return m_AppManager.GetSelectedAppName();
 }
 
+QString VideoView::GetSelectedNetworkName()
+{
+    return m_AppManager.GetSelectedNetworkName();
+}
+
 void VideoView::changeTargetFPS(int FPS)
 {
     m_AppManager.AppLimitFPS(FPS);
@@ -201,9 +206,9 @@ void VideoView::loadSource(const QUrl &url)
 }
 
 
-void VideoView::SelectApp(QString AppName)
+void VideoView::SelectApp(QString AppName, QString NetworkName)
 {
-    m_AppManager.LaunchApp(AppName);
+    m_AppManager.LaunchApp(AppName, NetworkName);
 }
 
 

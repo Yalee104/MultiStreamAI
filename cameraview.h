@@ -20,7 +20,8 @@ public:
     void        StartCamera(QString CameraDeviceName, bool ImageInverted);
     void        ConfigCameraView(QCameraViewfinderSettings ViewSettings);
     QString     GetSelectedAppName();
-    void        SelectApp(QString AppName);
+    QString     GetSelectedNetworkName();
+    void        SelectApp(QString AppName, QString NetworkName);
     void        changeTargetFPS(int FPS) override;
 
     QString pixelFormatToString( QVideoFrame::PixelFormat pixelformatvalue );

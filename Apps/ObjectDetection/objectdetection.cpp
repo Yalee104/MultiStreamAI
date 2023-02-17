@@ -6,34 +6,60 @@
 
 #define APP_NAME    "Object Detection"
 
-//Select Network Model, Picke only one (TODO: will revise to be able to pick dynamically from App as selection list)
-//#define USE_YOLOV5
-#define USE_YOLOV7
+/* Function pointer declaration */
+typedef int (*pfnNetworkInit)(ObjectDetectionInfo* pInitData, std::string AppID);
+typedef void (*pfnInfer)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+typedef void (*pfnReadOutput)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+typedef void (*pfnVisualize)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+
+typedef struct S_sNetworkMapping
+{
+    std::string NetworkName;
+    pfnNetworkInit  NetworkInit;
+    pfnInfer        InferProcess;
+    pfnReadOutput   ReadOutputProcess;
+    pfnVisualize    VisualizeProcess;
+
+} sNetowrkMapping;
+
+sNetowrkMapping SupportedNetworkMappingList[] = {
+
+    {"yolov7s 500fps 80 Class", Yolov7_Initialize, Yolov7_InferWorker, Yolov7_ReadOutputWorker, Yolov7_VisualizeWorker},
+    {"yolov5m 80 Class", Yolov5mInitialize, InferWorker, ReadOutputWorker, VisualizeWorker},
+
+    //Must be last
+    {"NULL", NULL, NULL, NULL, NULL},
+};
 
 
-#ifdef USE_YOLOV5
-#define DETECTION_MODEL_INIT(ObjDetInfo, AppID)                 Yolov5mInitialize(ObjDetInfo, AppID)
-#define DETECTION_MODEL_INFER_WORKER(ObjDetInfo, Data)          InferWorker(ObjDetInfo, Data)
-#define DETECTION_MODEL_READ_OUTPUT_WORKER(ObjDetInfo, Data)    ReadOutputWorker(ObjDetInfo, Data)
-#define DETECTION_MODEL_VISUALIZE_WORKER(ObjDetInfo, Data)      VisualizeWorker(ObjDetInfo, Data)
-#endif
-
-#ifdef USE_YOLOV7
-#define DETECTION_MODEL_INIT(ObjDetInfo, AppID)                 Yolov7_Initialize(ObjDetInfo, AppID)
-#define DETECTION_MODEL_INFER_WORKER(ObjDetInfo, Data)          Yolov7_InferWorker(ObjDetInfo, Data)
-#define DETECTION_MODEL_READ_OUTPUT_WORKER(ObjDetInfo, Data)    Yolov7_ReadOutputWorker(ObjDetInfo, Data)
-#define DETECTION_MODEL_VISUALIZE_WORKER(ObjDetInfo, Data)      Yolov7_VisualizeWorker(ObjDetInfo, Data)
-#endif
 
 ObjectDetection::ObjectDetection(QObject *parent)
     : AppBaseClass(parent)
 {
-
+    pSubMenu = new QMenu(APP_NAME);
+    SelectedNetworkMapping = 0; //o which is the first as default
+    NewSelectedNetworkMapping = SelectedNetworkMapping; // Should be same as default
     FrameCount = 0;
+
+    //Build Menu
+    pSubMenu->clear();
+
+    int totalSUpportedNetwork = sizeof(SupportedNetworkMappingList) / sizeof(SupportedNetworkMappingList[0]);
+    for (int i = 0; i < (totalSUpportedNetwork - 1); i++) {
+        QAction* NetworkSelection = pSubMenu->addAction(QString::fromStdString(SupportedNetworkMappingList[i].NetworkName));
+        NetworkSelection->setCheckable(true);
+        if (i == SelectedNetworkMapping)
+            NetworkSelection->setChecked(true);
+        NetworkSelection->setData(QString::fromStdString(SupportedNetworkMappingList[i].NetworkName));
+    }
+
+    connect(pSubMenu, SIGNAL(triggered(QAction*)), this, SLOT(NetworkSelectionChange(QAction*)));
+
 }
 
 ObjectDetection::~ObjectDetection()
 {
+    delete pSubMenu;
     //qDebug() << "~ObjectDetection()";
 }
 
@@ -45,6 +71,67 @@ const QString ObjectDetection::AppName()
 const QString ObjectDetection::GetAppName()
 {
     return APP_NAME;
+}
+
+const QString ObjectDetection::GetSelectedNetwork()
+{
+    return QString::fromStdString(SupportedNetworkMappingList[SelectedNetworkMapping].NetworkName);
+}
+
+bool ObjectDetection::AppContainSubMenu()
+{
+    return true;
+}
+
+int ObjectDetection::GetNetworkSelectionIndexMatchingName(QString NetworkName)
+{
+    int index = -1;
+    int totalSUpportedNetwork = sizeof(SupportedNetworkMappingList) / sizeof(SupportedNetworkMappingList[0]);
+    for (int i = 0; i < (totalSUpportedNetwork - 1); i++) {
+        if (NetworkName.compare(QString::fromStdString(SupportedNetworkMappingList[i].NetworkName)) == 0) {
+            index = i;
+            break;
+        }
+    }
+
+    return index;
+}
+
+void ObjectDetection::SelectNetwork(QString NetworkName)
+{
+    int NetworkIndex = GetNetworkSelectionIndexMatchingName(NetworkName);
+    if (NetworkIndex > 0) {
+        NewSelectedNetworkMapping = NetworkIndex;
+    }
+}
+
+QMenu* ObjectDetection::GetAppSubMenu()
+{
+
+    for (QAction* NetworkAction : pSubMenu->actions()) {
+        int NetworkIndex = GetNetworkSelectionIndexMatchingName(NetworkAction->text());
+        if (SelectedNetworkMapping != NetworkIndex) {
+            NetworkAction->setChecked(false);
+        }
+        else {
+            NetworkAction->setChecked(true);
+        }
+    }
+
+    return pSubMenu;
+}
+
+void ObjectDetection::NetworkSelectionChange(QAction *action)
+{
+    qDebug() << action->data().toString();
+
+    int totalSUpportedNetwork = sizeof(SupportedNetworkMappingList) / sizeof(SupportedNetworkMappingList[0]);
+    for (int i = 0; i < (totalSUpportedNetwork - 1); i++) {
+        if (action->data().toString().compare(QString::fromStdString(SupportedNetworkMappingList[i].NetworkName)) == 0) {
+           NewSelectedNetworkMapping = i;
+           break;
+        }
+    }
 }
 
 
@@ -74,12 +161,21 @@ void ObjectDetection::run()
 
     pObjDetInfo = new ObjectDetectionInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
-    DETECTION_MODEL_INIT(pObjDetInfo, this->m_AppID.toStdString());
+    SupportedNetworkMappingList[SelectedNetworkMapping].NetworkInit(pObjDetInfo, this->m_AppID.toStdString());
 
     TimerFPS.reset();
     while (!m_Terminate) {
 
         TimerFPSLimit.reset();
+
+        if (NewSelectedNetworkMapping != SelectedNetworkMapping) {
+            delete pObjDetInfo;
+            SelectedNetworkMapping = NewSelectedNetworkMapping;
+            pObjDetInfo = new ObjectDetectionInfo;
+            pObjDetInfo->PerformaceFPS = 0; //Just an initial value
+            SupportedNetworkMappingList[SelectedNetworkMapping].NetworkInit(pObjDetInfo, this->m_AppID.toStdString());
+            qDebug() << "Network CHANGED";
+        }
 
         if (!m_pImageInferQueue->empty()){
 
@@ -95,15 +191,15 @@ void ObjectDetection::run()
 
             //qDebug() << "1 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            DETECTION_MODEL_INFER_WORKER(pObjDetInfo, pData);
+            SupportedNetworkMappingList[SelectedNetworkMapping].InferProcess(pObjDetInfo, pData);
 
             //qDebug() << "2 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            DETECTION_MODEL_READ_OUTPUT_WORKER(pObjDetInfo, pData);
+            SupportedNetworkMappingList[SelectedNetworkMapping].ReadOutputProcess(pObjDetInfo, pData);
 
             //qDebug() << "3 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            DETECTION_MODEL_VISUALIZE_WORKER(pObjDetInfo, pData);
+            SupportedNetworkMappingList[SelectedNetworkMapping].VisualizeProcess(pObjDetInfo, pData);
 
             //qDebug() << "4 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 

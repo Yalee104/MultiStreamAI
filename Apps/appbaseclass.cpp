@@ -27,6 +27,11 @@ QMenu*  AppBaseClass::GetAppSubMenu()
     return nullptr;
 }
 
+const QString AppBaseClass::GetSelectedNetwork()
+{
+    return "";
+}
+
 void AppBaseClass::setTerminate(bool newTerminate)
 {
     m_Terminate = newTerminate;

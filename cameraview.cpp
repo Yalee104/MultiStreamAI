@@ -36,9 +36,14 @@ QString CameraView::GetSelectedAppName()
     return m_AppManager.GetSelectedAppName();
 }
 
-void CameraView::SelectApp(QString AppName)
+QString CameraView::GetSelectedNetworkName()
 {
-    m_AppManager.LaunchApp(AppName);
+    return m_AppManager.GetSelectedNetworkName();
+}
+
+void CameraView::SelectApp(QString AppName, QString NetworkName)
+{
+    m_AppManager.LaunchApp(AppName, NetworkName);
 }
 
 

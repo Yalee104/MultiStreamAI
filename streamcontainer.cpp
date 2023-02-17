@@ -19,7 +19,7 @@
 #define STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE    "InvertImage"
 
 #define STREAM_JSON_KEY_APP_NAME_SELECTED           "SelectedAppName"
-
+#define STREAM_JSON_KEY_APP_NETWORK_SELECTED        "SelectedAppNetwork"
 
 StreamContainer::StreamContainer(QObject *parent)
     : QObject{parent}
@@ -44,9 +44,10 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJso
 
         QString VideoUrl = ConfigInfo[STREAN_JSON_KEY_VIDEO_URL].toString();
         QString SelectedAppName = ConfigInfo[STREAM_JSON_KEY_APP_NAME_SELECTED].toString();
+        QString SelectedNetworkName = ConfigInfo[STREAM_JSON_KEY_APP_NETWORK_SELECTED].toString();
 
         pVideoView->loadSource(QUrl(VideoUrl));
-        pVideoView->SelectApp(SelectedAppName);
+        pVideoView->SelectApp(SelectedAppName, SelectedNetworkName);
     }
 
     if (dynamic_cast<const CameraView*>(pStreamView) != nullptr) {
@@ -70,7 +71,9 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJso
         pCameraView->ConfigCameraView(CameraViewSetting);
 
         QString SelectedAppName = ConfigInfo[STREAM_JSON_KEY_APP_NAME_SELECTED].toString();
-        pCameraView->SelectApp(SelectedAppName);
+        QString SelectedNetworkName = ConfigInfo[STREAM_JSON_KEY_APP_NETWORK_SELECTED].toString();
+
+        pCameraView->SelectApp(SelectedAppName, SelectedNetworkName);
     }
 
 }
@@ -132,6 +135,7 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE] = pCameraView->m_InvertImage;
 
                 CameraJsonObj[STREAM_JSON_KEY_APP_NAME_SELECTED] = pCameraView->GetSelectedAppName();
+                CameraJsonObj[STREAM_JSON_KEY_APP_NETWORK_SELECTED] = pCameraView->GetSelectedNetworkName();
 
                 StreamDescriptor.append(CameraJsonObj);
             }
@@ -146,6 +150,7 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
                 VideoJsonObj[STREAM_JSON_KEY_TYPE] = STREAM_JSON_KEY_TYPE_VALUE_VIDEO;
                 VideoJsonObj[STREAN_JSON_KEY_VIDEO_URL] = VideoUrl;
                 VideoJsonObj[STREAM_JSON_KEY_APP_NAME_SELECTED] = pVideoView->GetSelectedAppName();
+                VideoJsonObj[STREAM_JSON_KEY_APP_NETWORK_SELECTED] = pVideoView->GetSelectedNetworkName();
 
                 StreamDescriptor.append(VideoJsonObj);
             }
