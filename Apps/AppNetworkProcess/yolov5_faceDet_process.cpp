@@ -11,7 +11,7 @@ int Yolov5_PersonFace_Initialize(ObjectDetectionInfo* pInitData, std::string App
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     stNetworkModelInfo Network;
-    Network.id_name = "yolov5PersonFace";
+    Network.id_name = std::string("yolov5PersonFace").append(AppID);
     Network.hef_path = "yolov5s_personface.hef";
     Network.output_order_by_name = std::vector<std::string>({"yolov5s_personface/conv70",
                                                              "yolov5s_personface/conv63",

@@ -5,8 +5,8 @@
 #include <QMutex>
 #include <QQueue>
 #include "Apps/appbaseclass.h"
-#include "Apps/FaceRecognition/yolov5_faceDet_process.h"
-#include "Apps/FaceRecognition/arcface_process.h"
+#include "Apps/AppNetworkProcess/yolov5_faceDet_process.h"
+#include "Apps/AppNetworkProcess/arcface_process.h"
 
 class FaceRecognition : public AppBaseClass
 {

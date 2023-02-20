@@ -9,11 +9,12 @@ CONFIG += c++14
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    Apps/FaceRecognition/arcface_process.cpp \
+    Apps/AppNetworkProcess/arcface_process.cpp \
+    Apps/AppNetworkProcess/yolov5_faceDet_process.cpp \
+    Apps/AppNetworkProcess/yolov5_process.cpp \
+    Apps/AppNetworkProcess/yolov7_process.cpp \
     Apps/FaceRecognition/faceRecognition.cpp \
-    Apps/FaceRecognition/yolov5_faceDet_process.cpp \
     Apps/ObjectDetection/objectdetection.cpp \
-    Apps/ObjectDetection/yolov7_process.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
     Utils/database/FaceDatabase.cpp \
@@ -25,15 +26,15 @@ SOURCES += \
     streamcontainer.cpp \
     streamview.cpp \
     videoview.cpp \
-    Apps/ObjectDetection/yolov5_process.cpp
 
 HEADERS += \
+    Apps/AppNetworkProcess/arcface_process.h \
+    Apps/AppNetworkProcess/yolov5_faceDet_process.h \
+    Apps/AppNetworkProcess/yolov5_process.h \
+    Apps/AppNetworkProcess/yolov7_process.h \
     Apps/AppsFactory.h \
-    Apps/FaceRecognition/arcface_process.h \
     Apps/FaceRecognition/faceRecognition.h \
-    Apps/FaceRecognition/yolov5_faceDet_process.h \
     Apps/ObjectDetection/objectdetection.h \
-    Apps/ObjectDetection/yolov7_process.h \
     Apps/appbaseclass.h \
     Apps/appcommon.h \
     Apps/appmanager.h \
@@ -61,7 +62,6 @@ HEADERS += \
     streamcontainer.h \
     streamview.h \
     videoview.h \
-    Apps/ObjectDetection/yolov5_process.h
 
 INCLUDEPATH += $$PWD/Utils/hailo-common
 INCLUDEPATH += $$PWD/Utils/tracking
@@ -72,7 +72,7 @@ FORMS += \
     mainwindow.ui
 
 # Project Defines (Enable one only)
-DEFINES += x86
+DEFINES += QT_ON_x86
 # DEFINES += QT_ON_JETSON
 # DEFINES += QT_ON_RK3588
 

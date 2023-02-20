@@ -5,8 +5,9 @@
 #include <QMutex>
 #include <QQueue>
 #include "Apps/appbaseclass.h"
-#include "Apps/ObjectDetection/yolov5_process.h"
-#include "Apps/ObjectDetection/yolov7_process.h"
+#include "Apps/AppNetworkProcess/yolov5_process.h"
+#include "Apps/AppNetworkProcess/yolov7_process.h"
+#include "Apps/AppNetworkProcess/yolov5_faceDet_process.h"
 
 
 class ObjectDetection : public AppBaseClass

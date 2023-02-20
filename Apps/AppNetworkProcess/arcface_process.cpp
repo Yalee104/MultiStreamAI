@@ -289,7 +289,7 @@ int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID) {
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     stNetworkModelInfo Network;
-    Network.id_name = "ArcfaceMobile";
+    Network.id_name = std::string("ArcfaceMobile").append(AppID);
     Network.hef_path = "arcface_mobilefacenet.hef";
     //Network.hef_path = "arcface_r50.hef";
 

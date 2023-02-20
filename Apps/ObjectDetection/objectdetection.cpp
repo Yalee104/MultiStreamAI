@@ -24,9 +24,11 @@ typedef struct S_sNetworkMapping
 
 sNetowrkMapping SupportedNetworkMappingList[] = {
 
-    {"yolov7s 500fps 80 Class", Yolov7_Initialize, Yolov7_InferWorker, Yolov7_ReadOutputWorker, Yolov7_VisualizeWorker},
+    {"yolov7tiny 500fps 80 Class", Yolov7_Initialize, Yolov7_InferWorker, Yolov7_ReadOutputWorker, Yolov7_VisualizeWorker},
+    {"yolov5s 375fps Person/Face Class", Yolov5_PersonFace_Initialize, Yolov5_PersonFace_InferWorker, Yolov5_PersonFace_ReadOutputWorker, Yolov5_PersonFace_VisualizeWorker},
+#ifdef QT_ON_x86
     {"yolov5m 80 Class", Yolov5mInitialize, InferWorker, ReadOutputWorker, VisualizeWorker},
-
+#endif
     //Must be last
     {"NULL", NULL, NULL, NULL, NULL},
 };
@@ -137,10 +139,11 @@ void ObjectDetection::NetworkSelectionChange(QAction *action)
 
 void ObjectDetection::ImageInfer(const QImage &frame)
 {
-    static int mycount = 0;
+
     QMutexLocker locker(&ResourceLock);
 
     if (bFrameInProcess) {
+        //static int mycount = 0;
         //qDebug() << "exceeding limit, will drop frame " << mycount++;
         return;
     }
