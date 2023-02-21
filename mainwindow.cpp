@@ -109,13 +109,6 @@ void MainWindow::PlacementStreamViewRefreshAll()
     }
 }
 
-void MainWindow::PlacementStreamViewRemoveAll()
-{
-    QList<QString> StreamViewIDList = m_streamContainer.GetAllStreamViewID();
-    for (QString ID : StreamViewIDList) {
-        PlacementStreamViewRemove(ID);
-    }
-}
 
 void MainWindow::PlacementStreamViewRemove(QString ID)
 {
@@ -247,8 +240,37 @@ void MainWindow::on_actionSave_Stream_Config_triggered()
     }
 }
 
+
+void MainWindow::StreamCfgLoadingDone()
+{
+    this->setDisabled(false);
+}
+
+void MainWindow::PlacementStreamViewAddFromJsonCfg(QJsonValue StreamCfg)
+{
+    eStreamViewType StreamType = m_streamContainer.GetStreamViewType(StreamCfg);
+
+    if (StreamType == eStreamViewType::VIDEO) {
+        StreamView* pStreamView = on_actionVideo_triggered();
+        m_streamContainer.ConfigStream(pStreamView, StreamCfg);
+    }
+
+    if (StreamType == eStreamViewType::CAMERA) {
+        StreamView* pStreamView = on_actionCamera_triggered();
+        m_streamContainer.ConfigStream(pStreamView, StreamCfg);
+    }
+}
+
+
 void MainWindow::on_actionLoad_Stream_Config_triggered()
 {
+
+    StreamLoadingProgress *workerThread = new StreamLoadingProgress();
+    connect(workerThread, &StreamLoadingProgress::AllDone, this, &MainWindow::StreamCfgLoadingDone);
+    connect(workerThread, &StreamLoadingProgress::RemoveStreamViewByID, this, &MainWindow::PlacementStreamViewRemove);
+    connect(workerThread, &StreamLoadingProgress::AddStreamFromJsonCfg, this, &MainWindow::PlacementStreamViewAddFromJsonCfg);
+
+    connect(workerThread, &StreamLoadingProgress::finished, workerThread, &QObject::deleteLater);
 
     QFileDialog fileDialog(this);
     fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
@@ -256,8 +278,6 @@ void MainWindow::on_actionLoad_Stream_Config_triggered()
     fileDialog.setNameFilter("*.json");
 
     if (fileDialog.exec() == QDialog::Accepted) {
-
-        PlacementStreamViewRemoveAll();
 
         QString FilePath = fileDialog.selectedUrls().constFirst().path();
         QFile loadFile(FilePath);
@@ -270,26 +290,16 @@ void MainWindow::on_actionLoad_Stream_Config_triggered()
 
             QJsonObject Streams = loadDoc.object();
 
-            QJsonArray  StreamDescriptorList = m_streamContainer.GetStreamDescriptorListFromJson(Streams);
+            workerThread->StreamViewIDList = m_streamContainer.GetAllStreamViewID();
+            workerThread->StreamCfgJsonArray = m_streamContainer.GetStreamDescriptorListFromJson(Streams);
 
-            for (auto StreamJsonValue : StreamDescriptorList) {
-
-                eStreamViewType StreamType = m_streamContainer.GetStreamViewType(StreamJsonValue);
-
-                if (StreamType == eStreamViewType::VIDEO) {
-                    StreamView* pStreamView = on_actionVideo_triggered();
-                    m_streamContainer.ConfigStream(pStreamView, StreamJsonValue);
-                }
-
-                if (StreamType == eStreamViewType::CAMERA) {
-                    StreamView* pStreamView = on_actionCamera_triggered();
-                    m_streamContainer.ConfigStream(pStreamView, StreamJsonValue);
-                }
-            }
-        }
-        else {
-            qWarning("Couldn't open save file.");
         }
     }
+
+
+    workerThread->start();
+
+    this->setDisabled(true);
+
 }
 
