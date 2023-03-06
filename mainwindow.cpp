@@ -244,6 +244,17 @@ void MainWindow::on_actionSave_Stream_Config_triggered()
 void MainWindow::StreamCfgLoadingDone()
 {
     this->setDisabled(false);
+
+    //TODO - Find out why this "might" cause crash during stream load, a bug from QT 5.15?
+    //       In any case, we can safely ignore this as even there is memory leak it won't be much and
+    //       this feature is not going to be using regulary in the demo anyway.
+    //m_pProgressDialog->deleteLater();
+}
+
+
+void MainWindow::StreamCfgLoadingProgress(int Progress)
+{
+    m_pProgressDialog->setValue(Progress);
 }
 
 void MainWindow::PlacementStreamViewAddFromJsonCfg(QJsonValue StreamCfg)
@@ -265,13 +276,6 @@ void MainWindow::PlacementStreamViewAddFromJsonCfg(QJsonValue StreamCfg)
 void MainWindow::on_actionLoad_Stream_Config_triggered()
 {
 
-    StreamLoadingProgress *workerThread = new StreamLoadingProgress();
-    connect(workerThread, &StreamLoadingProgress::AllDone, this, &MainWindow::StreamCfgLoadingDone);
-    connect(workerThread, &StreamLoadingProgress::RemoveStreamViewByID, this, &MainWindow::PlacementStreamViewRemove);
-    connect(workerThread, &StreamLoadingProgress::AddStreamFromJsonCfg, this, &MainWindow::PlacementStreamViewAddFromJsonCfg);
-
-    connect(workerThread, &StreamLoadingProgress::finished, workerThread, &QObject::deleteLater);
-
     QFileDialog fileDialog(this);
     fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
     fileDialog.setWindowTitle(tr("Open Config File"));
@@ -279,7 +283,7 @@ void MainWindow::on_actionLoad_Stream_Config_triggered()
 
     if (fileDialog.exec() == QDialog::Accepted) {
 
-        QString FilePath = fileDialog.selectedUrls().constFirst().path();
+        QString FilePath = fileDialog.selectedFiles().first();
         QFile loadFile(FilePath);
 
         if (loadFile.open(QIODevice::ReadOnly)) {
@@ -290,16 +294,29 @@ void MainWindow::on_actionLoad_Stream_Config_triggered()
 
             QJsonObject Streams = loadDoc.object();
 
+            StreamLoadingProgress *workerThread = new StreamLoadingProgress();
+            connect(workerThread, &StreamLoadingProgress::AllDone, this, &MainWindow::StreamCfgLoadingDone);
+            connect(workerThread, &StreamLoadingProgress::RemoveStreamViewByID, this, &MainWindow::PlacementStreamViewRemove);
+            connect(workerThread, &StreamLoadingProgress::AddStreamFromJsonCfg, this, &MainWindow::PlacementStreamViewAddFromJsonCfg);
+            connect(workerThread, &StreamLoadingProgress::CompletionProgressStatus, this, &MainWindow::StreamCfgLoadingProgress);
+
+            connect(workerThread, &StreamLoadingProgress::finished, workerThread, &QObject::deleteLater);
+
             workerThread->StreamViewIDList = m_streamContainer.GetAllStreamViewID();
             workerThread->StreamCfgJsonArray = m_streamContainer.GetStreamDescriptorListFromJson(Streams);
+
+            workerThread->start();
+
+            m_pProgressDialog = new QProgressDialog("Loading Stream Views...", nullptr, 0, 100);
+            m_pProgressDialog->setWindowModality(Qt::WindowModal);
+            m_pProgressDialog->setMinimumDuration(0);
+
+            this->setDisabled(true);
 
         }
     }
 
 
-    workerThread->start();
-
-    this->setDisabled(true);
 
 }
 

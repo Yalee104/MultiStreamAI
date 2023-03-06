@@ -67,42 +67,45 @@ private slots:
 
     void StreamCfgLoadingDone();
 
+    void StreamCfgLoadingProgress(int Progress);
+
 private:
     Ui::MainWindow  *ui;
     StreamContainer m_streamContainer;
     QGridLayout     m_gridlayout;
     int             m_uniqueID = 0;
     int             m_GlobalTargetFPS = 0; //0 is the default depending on the stream fps.
+
+    QProgressDialog* m_pProgressDialog = nullptr;
 };
 
 
 class StreamLoadingProgress : public QThread
 {
+
     Q_OBJECT
     void run() override {
 
-        int delaysInMs = 50;
+        int delaysInMs = 250;
         int progressStepPerStream = 0;
-
-        QProgressDialog progress("Removing Stream Views...", "Abort", 0, 100);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setMinimumDuration(0);
+        int CurrentProgressInPercent = 0;
 
         /* First remove all open stream */
-
         if (StreamViewIDList.count())
             progressStepPerStream = 50 / StreamViewIDList.count();
+        else
+            CurrentProgressInPercent = 50;
 
         for (QString ID : StreamViewIDList) {
             emit RemoveStreamViewByID(ID);
 
             usleep(delaysInMs*1000);
-            progress.setValue(progress.value() + progressStepPerStream);
+            CurrentProgressInPercent += progressStepPerStream;
+            emit CompletionProgressStatus(CurrentProgressInPercent);
         }
 
         /* Now we add streams */
 
-        progress.setLabelText("Loading Stream Views...");
         usleep(500*1000);
 
         if (StreamCfgJsonArray.count())
@@ -110,14 +113,16 @@ class StreamLoadingProgress : public QThread
 
         for (auto StreamJsonValue : StreamCfgJsonArray) {
 
-            progress.setValue(progress.value() + progressStepPerStream);
+            CurrentProgressInPercent += progressStepPerStream;
+            emit CompletionProgressStatus(CurrentProgressInPercent);
 
             emit AddStreamFromJsonCfg(StreamJsonValue);
 
             usleep(delaysInMs*1000);
         }
 
-        progress.setValue(100);
+        emit CompletionProgressStatus(100);
+
         emit AllDone();
     }
 
@@ -126,6 +131,7 @@ public:
     QList<QString> StreamViewIDList;
 
 signals:
+    void CompletionProgressStatus(int progress);
     void RemoveStreamViewByID(QString ID);
     void AddStreamFromJsonCfg(QJsonValue StreamCfg);
     void AllDone();
