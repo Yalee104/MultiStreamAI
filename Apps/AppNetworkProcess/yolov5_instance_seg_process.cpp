@@ -208,11 +208,10 @@ void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetec
 
 #ifdef USE_OPENCV
 
-    QImage image( ImageCV.data,
-                  ImageCV.cols, ImageCV.rows,
-                  static_cast<int>(ImageCV.step),
-                  QImage::Format_RGB888 );
-    pData->VisualizedImage = image;
+    pData->VisualizedImage = QImage( ImageCV.data,
+                                     ImageCV.cols, ImageCV.rows,
+                                     static_cast<int>(ImageCV.step),
+                                     QImage::Format_RGB888 ).copy();
 
 #else
 
