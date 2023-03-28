@@ -54,8 +54,8 @@ void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     //qDebug() << "ImageInpuitRaw buffer size: " <<pInfo->ImageInputRaw.size();
 
     //TODO: Should not need to calculate this every time, only when resolution changes, move to more appropriate place
-    pInfo->scaledRatioWidth = pData->VisualizedImage.width() / scaledImage.width();
-    pInfo->scaledRatioHeight = pData->VisualizedImage.height() / scaledImage.height();
+    pInfo->scaledRatioWidth = (float)pData->VisualizedImage.width() / (float)scaledImage.width();
+    pInfo->scaledRatioHeight = (float)pData->VisualizedImage.height() / (float)scaledImage.height();
 
     const uchar* pImagedata = scaledImage.bits();
 
@@ -109,8 +109,8 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
     font.setPixelSize(24);
     qPainter.setFont(font);
 
-    float widthScale = pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
-    float heightScale = pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
+    float widthScale = (float)pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
+    float heightScale = (float)pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%

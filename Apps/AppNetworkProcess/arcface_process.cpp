@@ -380,8 +380,8 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
 #endif
 
     //Get the scale between image and object detection network input size
-    float widthScale = pDetectionInfo->NetworkInputWidth * pDetectionInfo->scaledRatioWidth;
-    float heightScale = pDetectionInfo->NetworkInputHeight * pDetectionInfo->scaledRatioHeight;
+    float widthScale = (float)pDetectionInfo->NetworkInputWidth * (float)pDetectionInfo->scaledRatioWidth;
+    float heightScale = (float)pDetectionInfo->NetworkInputHeight * (float)pDetectionInfo->scaledRatioHeight;
 
     //For all face class we cropp the face and infer
     bool bDataSentForInfer = false;
@@ -498,8 +498,8 @@ void ArcFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pD
     font.setPixelSize(24);
     qPainter.setFont(font);
 
-    float widthScale = pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
-    float heightScale = pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
+    float widthScale = (float)pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
+    float heightScale = (float)pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
