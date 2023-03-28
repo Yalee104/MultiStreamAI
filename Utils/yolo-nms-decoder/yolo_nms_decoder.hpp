@@ -15,10 +15,16 @@
 struct DetectionObject {
     float ymin, xmin, ymax, xmax, confidence;
     int class_id;
+    std::vector<float32_t> mask;
 
     DetectionObject(float ymin, float xmin, float ymax, float xmax, float confidence, int class_id):
         ymin(ymin), xmin(xmin), ymax(ymax), xmax(xmax), confidence(confidence), class_id(class_id)
         {}
+
+    DetectionObject(float ymin, float xmin, float ymax, float xmax, float confidence, int class_id, std::vector<float32_t> &mask):
+        ymin(ymin), xmin(xmin), ymax(ymax), xmax(xmax), confidence(confidence), class_id(class_id), mask(mask)
+        {}
+
     bool operator<(const DetectionObject &s2) const {
         return this->confidence > s2.confidence;
     }
@@ -61,7 +67,6 @@ class YoloNmsDecoder {
     float ConfidenceThreshold = 0.3f;
     std::vector<YoloOutputInfo> OutputInfoList;
 
-
     float iou_calc(const DetectionObject &box_1, const DetectionObject &box_2) {
         const float width_of_overlap_area = (std::min)(box_1.xmax, box_2.xmax) - (std::max)(box_1.xmin, box_2.xmin);
         const float height_of_overlap_area = (std::min)(box_1.ymax, box_2.ymax) - (std::max)(box_1.ymin, box_2.ymin);
@@ -74,13 +79,13 @@ class YoloNmsDecoder {
     }
 
     void extract_boxes( std::vector<T> &fm, QunatizationInfo &q_info, int feature_map_size_row, int feature_map_size_col, 
-                        std::vector<int> &Anchors, std::vector<DetectionObject> &objects, float& thr) {
+                        std::vector<int> &Anchors, std::vector<DetectionObject> &objects, float& thr, size_t maskSize) {
         float  confidence, xmin, ymin, xmax, ymax, conf_max = 0.0f;
         int add = 0, anchor = 0, chosen_row = 0, chosen_col = 0, chosen_cls = -1;
         float cls_prob, prob_max;
 
         //PreCalculation for optimization
-        int lcTotalFeatureMapChannel = this->TotalFeatureMapChannel;
+        int lcTotalFeatureMapChannel = this->TotalFeatureMapChannel + maskSize;
         int lcYoloAnchorNum = this->YoloAnchorNum;
         int TotalFeatMapChXAnchorNum = lcTotalFeatureMapChannel * lcYoloAnchorNum;
         int AggregateCalc = TotalFeatMapChXAnchorNum * feature_map_size_col;
@@ -89,7 +94,8 @@ class YoloNmsDecoder {
 
         for (int row = 0; row < feature_map_size_row; ++row) {
             for (int col = 0; col < feature_map_size_col; ++col) {
-                prob_max = 0;
+                prob_max = 0.0f;
+                conf_max = 0.0f;
                 for (int a = 0; a < lcYoloAnchorNum; ++a) {
                     add =   AggregateCalc * row + 
                             TotalFeatMapChXAnchorNum * col + 
@@ -100,24 +106,25 @@ class YoloNmsDecoder {
                     if (confidence < thr)
                         continue;
 
-                    for (int c = CLASS_CHANNEL_OFFSET; c < lcTotalFeatureMapChannel; ++c) {
+                    for (int c = CLASS_CHANNEL_OFFSET; c < this->TotalFeatureMapChannel; ++c) {
                         add =   AggregateCalc * row + 
                                 TotalFeatMapChXAnchorNum * col + 
                                 lcTotalFeatureMapChannel * a + c;
 
                         // final confidence: box confidence * class probability
-                        cls_prob = fm[add];
+                        cls_prob = (isRawData) ? this->output_data_trasnform(this->dequantize(fm[add], q_info)) : this->output_data_trasnform(fm[add]);
+                        cls_prob *= confidence;
                         if (cls_prob > prob_max) {
                             prob_max = cls_prob;
                             chosen_cls = c - CLASS_CHANNEL_OFFSET + 1;
                         }
                     }
 
-                    conf_max = (isRawData) ? this->output_data_trasnform(this->dequantize(prob_max, q_info)) * confidence : this->output_data_trasnform(prob_max) * confidence;
+                    conf_max = prob_max;
+
                     anchor = a;
                     chosen_row = row;
                     chosen_col = col;
-
                 }
                 if (conf_max >= thr) {
 
@@ -133,13 +140,115 @@ class YoloNmsDecoder {
                     xmax = (DBox.x + (DBox.w / 2.0f));
                     ymax = (DBox.y + (DBox.h / 2.0f));
 
-                    objects.push_back(DetectionObject(ymin, xmin, ymax, xmax, conf_max, chosen_cls));
+                    //copy mask if available
+                    if (maskSize) {
+                        std::vector<float32_t> DetObjMask(maskSize, 0.0f);
+                        int maskIndexLocation = add + this->TotalFeatureMapChannel;
+
+                        for (int i=0; i < maskSize; i++) {
+                            //Mask starts at index 85 (assuming 80 class), for example with 20x20x371 of 3 anchor
+                            //Each anchor size is 117, for network without mask and 80 class its size is 85, mask contain size of 32
+                            //usually, so 85 + 32 = 117.
+                            DetObjMask[i] = (isRawData) ? this->dequantize(fm[maskIndexLocation + i], q_info) : fm[maskIndexLocation + i];
+                            //DetObjMask[i] *= confidence; //TODO: Test with and without result in more detail if needed.
+                        }
+
+                        objects.push_back(DetectionObject(ymin, xmin, ymax, xmax, conf_max, chosen_cls, DetObjMask));
+                    }
+                    else {
+                        objects.push_back(DetectionObject(ymin, xmin, ymax, xmax, conf_max, chosen_cls));
+                    }
                 }
             }
         }
     }    
 
+protected:
+
+    std::vector<HailoDetectionPtr> decodeWithMask(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3, size_t MaskSize = 0) {
+        size_t num_boxes = 0;
+        std::vector<DetectionObject> objects;
+        objects.reserve(MAX_BOXES);
+
+        //QElapsedTimer timer;
+        //timer.start();
+
+        if (Output1.size() > 0) {
+            this->extract_boxes(Output1, this->OutputInfoList[0].quantizationInfo, this->OutputInfoList[0].FeatureSizeRow, this->OutputInfoList[0].FeatureSizeCol,
+                                this->OutputInfoList[0].anchors, objects, this->ConfidenceThreshold, MaskSize);
+        }
+
+
+        if (Output2.size() > 0) {
+            this->extract_boxes(Output2, this->OutputInfoList[1].quantizationInfo, this->OutputInfoList[1].FeatureSizeRow, this->OutputInfoList[1].FeatureSizeCol,
+                                this->OutputInfoList[1].anchors, objects, this->ConfidenceThreshold, MaskSize);
+        }
+
+        //qDebug() << timer.nsecsElapsed() << ", " << Output1.size() << ", " << Output2.size() << ", " << Output3.size();
+
+
+        if (Output3.size() > 0) {
+            this->extract_boxes(Output3, this->OutputInfoList[2].quantizationInfo, this->OutputInfoList[2].FeatureSizeRow, this->OutputInfoList[2].FeatureSizeCol,
+                                this->OutputInfoList[2].anchors, objects, this->ConfidenceThreshold, MaskSize);
+        }
+
+
+        // filter by overlapping boxes
+
+        num_boxes = objects.size();
+
+        if (objects.size() > 0) {
+            std::sort(objects.begin(), objects.end());
+            for (unsigned int i = 0; i < objects.size(); ++i) {
+                if (objects[i].confidence <= this->ConfidenceThreshold)
+                    continue;
+                for (unsigned int j = i + 1; j < objects.size(); ++j) {
+                    if (objects[i].class_id == objects[j].class_id && objects[j].confidence >= this->ConfidenceThreshold) {
+                        if (iou_calc(objects[i], objects[j]) >= IOU_THRESHOLD) {
+                            objects[j].confidence = 0;
+                            num_boxes -= 1;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        //qDebug() << "num_boxes: " << num_boxes;
+        // Copy the results
+        std::vector<HailoDetectionPtr> results;
+        if (num_boxes > 0) {
+
+            for (const auto &obj: objects) {
+                if (obj.confidence >= this->ConfidenceThreshold) {
+
+                    HailoBBox HailoObjBox (obj.xmin, obj.ymin, obj.xmax - obj.xmin, obj.ymax - obj.ymin);
+                    HailoDetection HailoDetObj(HailoObjBox, (float)obj.class_id, "", obj.confidence);
+
+                    if (MaskSize) {
+                        //qDebug() << "decoded mask =" << obj.mask;
+                        HailoMatrixPtr maskData = std::make_shared<HailoMatrix>(obj.mask, 1, MaskSize);
+                        HailoDetObj.add_object(maskData);
+                    }
+
+                    results.push_back(std::make_shared<HailoDetection>(HailoDetObj));
+                }
+            }
+
+            return results;
+        } else {
+
+            results.resize(0);
+            return results;
+        }
+    }
+
 public:
+
+    float sigmoid(float x) {
+        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
+        return 1.0f / (1.0f + expf(-x));
+    }
 
     virtual float      output_data_trasnform(float data) {
         return data;
@@ -195,65 +304,7 @@ public:
     }
 
     std::vector<HailoDetectionPtr> decode(std::vector<T> &Output1, std::vector<T> &Output2, std::vector<T> &Output3) {
-        size_t num_boxes = 0;
-        std::vector<DetectionObject> objects;
-        objects.reserve(MAX_BOXES);
-        
-        //QElapsedTimer timer;
-        //timer.start();
-
-        if (Output1.size() > 0) {
-            this->extract_boxes(Output1, this->OutputInfoList[0].quantizationInfo, this->OutputInfoList[0].FeatureSizeRow, this->OutputInfoList[0].FeatureSizeCol,
-                                this->OutputInfoList[0].anchors, objects, this->ConfidenceThreshold);
-        }
-
-        if (Output2.size() > 0) {
-            this->extract_boxes(Output2, this->OutputInfoList[1].quantizationInfo, this->OutputInfoList[1].FeatureSizeRow, this->OutputInfoList[1].FeatureSizeCol,
-                                this->OutputInfoList[1].anchors, objects, this->ConfidenceThreshold);
-        }
-
-        //qDebug() << timer.nsecsElapsed() << ", " << Output1.size() << ", " << Output2.size() << ", " << Output3.size();
-
-        if (Output3.size() > 0) {
-            this->extract_boxes(Output3, this->OutputInfoList[2].quantizationInfo, this->OutputInfoList[2].FeatureSizeRow, this->OutputInfoList[2].FeatureSizeCol,
-                                this->OutputInfoList[2].anchors, objects, this->ConfidenceThreshold);
-        }
-
-
-        // filter by overlapping boxes
-        num_boxes = objects.size();
-        if (objects.size() > 0) {
-            std::sort(objects.begin(), objects.end());
-            for (unsigned int i = 0; i < objects.size(); ++i) {
-                if (objects[i].confidence <= this->ConfidenceThreshold)
-                    continue;
-                for (unsigned int j = i + 1; j < objects.size(); ++j) {
-                    if (objects[i].class_id == objects[j].class_id && objects[j].confidence >= this->ConfidenceThreshold) {
-                        if (iou_calc(objects[i], objects[j]) >= IOU_THRESHOLD) {
-                            objects[j].confidence = 0;
-                            num_boxes -= 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        //std::cout << "num_boxes: " << num_boxes << std::endl;
-        // Copy the results
-        std::vector<HailoDetectionPtr> results;
-        if (num_boxes > 0) {
-
-            for (const auto &obj: objects) {
-                if (obj.confidence >= this->ConfidenceThreshold) {
-                    results.push_back(std::make_shared<HailoDetection>(HailoDetection(  HailoBBox(obj.xmin, obj.ymin, obj.xmax - obj.xmin, obj.ymax - obj.ymin),
-                                                                                        (float)obj.class_id, "", obj.confidence)));
-                }
-            }
-            return results;
-        } else {        
-            results.resize(0);
-            return results;
-        }
+        return this->decodeWithMask(Output1, Output2, Output3, 0);
     }
 };
 
@@ -263,18 +314,13 @@ class Yolov5NmsDecoder : public YoloNmsDecoder <T> {
 
     bool        bActivationIsSigmoid = false;
     
-    float sigmoid(float x) {
-        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
-        return 1.0f / (1.0f + expf(-x));
-    }
-
     //Override parent
     float output_data_trasnform(float data) {
 
         if (this->bActivationIsSigmoid)
             return data;
         
-        return sigmoid(data);  
+        return this->sigmoid(data);
 
     }
     
@@ -314,16 +360,29 @@ public:
 };
 
 
+template <class T>
+class Yolov5SegmetationDecoder : public Yolov5NmsDecoder <T> {
+
+public:
+
+    Yolov5SegmetationDecoder(bool bSigmoidActivation) : Yolov5NmsDecoder<T>(bSigmoidActivation) {
+
+    }
+
+    std::vector<HailoDetectionPtr> DecodeWithSegmentationMask(std::vector<T> &Output1,
+                                                              std::vector<T> &Output2,
+                                                              std::vector<T> &Output3,
+                                                              size_t MaskSize) {
+
+        return this->decodeWithMask(Output1, Output2, Output3, MaskSize);
+    }
+
+};
 
 template <class T>
 class Yolov7NmsDecoder : public YoloNmsDecoder <T> {
 
     bool        bActivationIsSigmoid = false;
-
-    float sigmoid(float x) {
-        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
-        return 1.0f / (1.0f + expf(-x));
-    }
 
     //Override parent
     float output_data_trasnform(float data) {
@@ -331,7 +390,7 @@ class Yolov7NmsDecoder : public YoloNmsDecoder <T> {
         if (this->bActivationIsSigmoid)
             return data;
 
-        return sigmoid(data);
+        return this->sigmoid(data);
 
     }
 
@@ -377,18 +436,13 @@ class Yolov4NmsDecoder : public YoloNmsDecoder <T> {
     const float YOLOV4_SCALE_XY = 1.05f;
     bool        bActivationIsSigmoid = false;
 
-    float sigmoid(float x) {
-        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
-        return 1.0f / (1.0f + expf(-x));
-    }
-
     //Override parent
     float output_data_trasnform(float data) {
 
         if (this->bActivationIsSigmoid)
             return data;
         
-        return sigmoid(data);        
+        return this->sigmoid(data);
     }
 
 public:
@@ -433,18 +487,13 @@ class Yolov3NmsDecoder : public YoloNmsDecoder <T> {
 
     bool        bActivationIsSigmoid = false;
     
-    float sigmoid(float x) {
-        // returns the value of the sigmoid function f(x) = 1/(1 + e^-x)
-        return 1.0f / (1.0f + expf(-x));
-    }
-
     //Override parent
     float output_data_trasnform(float data) {
 
         if (this->bActivationIsSigmoid)
             return data;
         
-        return sigmoid(data);  
+        return this->sigmoid(data);
 
     }
     

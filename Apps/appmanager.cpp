@@ -2,6 +2,7 @@
 #include <QDebug>
 #include "appmanager.h"
 #include "Apps/ObjectDetection/objectdetection.h"
+#include "Apps/Segmentation/segmentation.h"
 #include "Apps/FaceRecognition/faceRecognition.h"
 
 AppManager::AppManager(QObject *parent)
@@ -98,6 +99,14 @@ void AppManager::ReGenerateMenu()
     pObjectDetection->setText(ObjectDetection::AppName());
     pObjectDetection->setData(ClassName);
     m_pAppMenu->addAction(pObjectDetection);
+
+    //Register Apps: Segmentation
+    ClassName = m_AppsFactory.registerObject<Segmentation>();
+    QAction *pSegmentation = new QAction(m_pAppMenu);
+    pSegmentation->setText(Segmentation::AppName());
+    pSegmentation->setData(ClassName);
+    m_pAppMenu->addAction(pSegmentation);
+
 
     //Register Apps: Face Recognition
     ClassName = m_AppsFactory.registerObject<FaceRecognition>();

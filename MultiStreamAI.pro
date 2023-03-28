@@ -11,10 +11,12 @@ CONFIG += c++14
 SOURCES += \
     Apps/AppNetworkProcess/arcface_process.cpp \
     Apps/AppNetworkProcess/yolov5_faceDet_process.cpp \
+    Apps/AppNetworkProcess/yolov5_instance_seg_process.cpp \
     Apps/AppNetworkProcess/yolov5_process.cpp \
     Apps/AppNetworkProcess/yolov7_process.cpp \
     Apps/FaceRecognition/faceRecognition.cpp \
     Apps/ObjectDetection/objectdetection.cpp \
+    Apps/Segmentation/segmentation.cpp \
     Apps/appbaseclass.cpp \
     Apps/appmanager.cpp \
     Utils/database/FaceDatabase.cpp \
@@ -30,11 +32,13 @@ SOURCES += \
 HEADERS += \
     Apps/AppNetworkProcess/arcface_process.h \
     Apps/AppNetworkProcess/yolov5_faceDet_process.h \
+    Apps/AppNetworkProcess/yolov5_instance_seg_process.h \
     Apps/AppNetworkProcess/yolov5_process.h \
     Apps/AppNetworkProcess/yolov7_process.h \
     Apps/AppsFactory.h \
     Apps/FaceRecognition/faceRecognition.h \
     Apps/ObjectDetection/objectdetection.h \
+    Apps/Segmentation/segmentation.h \
     Apps/appbaseclass.h \
     Apps/appcommon.h \
     Apps/appmanager.h \
