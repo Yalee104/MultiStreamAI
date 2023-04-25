@@ -200,11 +200,7 @@ MultiNetworkPipeline::MultiNetworkPipeline()
     DBG_WARN("LARGE_INFER_QUEUE_FOR_UNIT_TEST is defined, please remove from CMakeList if this is not a unit test build");
 #endif
 
-    hailo_device_found = 0;
-            
-    if (InitializeHailo() == 0) {
-        DBG_WARN("No Hailo Device Found");
-    }
+    hailo_device_found = 0;           
     
 }
 
@@ -237,22 +233,28 @@ MultiNetworkPipeline *MultiNetworkPipeline::GetInstance()
 MnpReturnCode MultiNetworkPipeline::ReleaseStreamChannel(uint32_t device_id, std::string stream_id /*= "default"*/)
 {
 
+    uint32_t  deviceIdToRelease = device_id;
+    
     if (!hailo_device_found)
         return MnpReturnCode::HAILO_NOT_INITIALIZED;
 
-    if (device_id >= hailo_device_found)
+    if (deviceIdToRelease >= hailo_device_found)
     {
         DBG_WARN("device id exceeded current maximum hailodevice found (" << hailo_device_found << ")");
         return MnpReturnCode::INVALID_PARAMETER;
     }
 
+    if (bAutoMultiDeviceScheduler) {
+        deviceIdToRelease = 0; //Always overwrite to 0 since multi-device is being automatically scheduled by HailoRT
+    }
+	
     //Protect resource
     std::lock_guard<std::mutex> lock(mutex_class_protection);
 
     std::list <stHailoStreamInfo*> :: iterator itr;
     for(itr = streamInfoList.begin(); itr != streamInfoList.end(); itr++) {
 
-        if ((*itr)->Device_Id != device_id)
+        if ((*itr)->Device_Id != deviceIdToRelease)
             continue;
 
         if ((*itr)->Stream_Id.compare(stream_id) == 0) {
@@ -313,6 +315,18 @@ MnpReturnCode MultiNetworkPipeline::ReleaseAllResource()
     return RetCode;
 }
 
+MnpReturnCode MultiNetworkPipeline::Config(bool EnableAutoMultiDeviceScheduler)
+{
+    MnpReturnCode RetCode = MnpReturnCode::SUCCESS;
+    
+    //If already initialized then we should skip
+    if (hailo_device_found)
+    	return MnpReturnCode::FAILED;
+    
+    bAutoMultiDeviceScheduler = EnableAutoMultiDeviceScheduler;
+    
+    return RetCode;
+}
 
 size_t MultiNetworkPipeline::InitializeHailo()
 {    
@@ -340,31 +354,55 @@ size_t MultiNetworkPipeline::InitializeHailo()
             hailo_device_found = 0;
         }
 
-        for (size_t i = 0; i < hailo_device_found; i++) {
+        bool bEnableMultiProcessService = false;   //Set default to false, we can try to support this later
+
+        if (bAutoMultiDeviceScheduler) {
             hailo_vdevice_params_t params = {0};
 
             if (hailo_init_vdevice_params(&params) !=  HAILO_SUCCESS){
                 DBG_ERROR("-E- failed to create hailo_init_vdevice_params");
-                break;
+                goto init_exit;
             }
 
-            //TODO: Here we create each device as individual entity, application can have the flexibility
-            //      to decide multinetwork schedule for each hailo device, in the future we might be able to
-            //      support multi-device network scheduler, when it does we will have to revice the code
-            //      here and make sure we can have the option for it.
-            params.device_count = 1;
-            params.device_ids = &device_ids[i];
-            params.scheduling_algorithm = HAILO_SCHEDULING_ALGORITHM_ROUND_ROBIN;
-            params.multi_process_service = false;       //Set default to false, we can try to support this later
-            status = hailo_create_vdevice(&params, &vdevices[i]);
-            
-            //std::cout << "Allocated vDevice Address: " << &vdevices[i] << std::endl;
+            params.device_count = hailo_device_found;
+            params.multi_process_service = bEnableMultiProcessService;
+            if (params.multi_process_service) {
+                params.group_id = "SHARED";
+            }
+
+            status = hailo_create_vdevice(&params, &vdevices[0]);
+
+            //std::cout << "Allocated vDevice Address: " << &vdevices[0] << std::endl;
 
             REQUIRE_SUCCESS_CHECK(status, init_exit, "Failed to create hailo_create_vdevice");
 
         }
+        else {
 
-       
+            for (size_t i = 0; i < hailo_device_found; i++) {
+                hailo_vdevice_params_t params = {0};
+
+                if (hailo_init_vdevice_params(&params) !=  HAILO_SUCCESS){
+                        DBG_ERROR("-E- failed to create hailo_init_vdevice_params");
+                    break;
+                }
+
+                params.device_count = 1;
+                params.device_ids = &device_ids[i];
+                params.scheduling_algorithm = HAILO_SCHEDULING_ALGORITHM_ROUND_ROBIN;
+                params.multi_process_service = bEnableMultiProcessService;
+                if (params.multi_process_service) {
+                        params.group_id = "SHARED";
+                }
+
+                status = hailo_create_vdevice(&params, &vdevices[i]);
+
+                //std::cout << "Allocated vDevice Address: " << &vdevices[i] << std::endl;
+
+                REQUIRE_SUCCESS_CHECK(status, init_exit, "Failed to create hailo_create_vdevice");
+
+            }
+        }
     } catch (std::exception const& e) {
         DBG_ERROR("-E- create device failed" << e.what());
     }
@@ -387,7 +425,7 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
     if (!hailo_device_found)
         return MnpReturnCode::HAILO_NOT_INITIALIZED;
 
-    if (device_id >= hailo_device_found)
+    if (!bAutoMultiDeviceScheduler && (device_id >= hailo_device_found))
     {
         DBG_WARN("device id exceeded current maximum hailodevice found (" << hailo_device_found << ")");
         return MnpReturnCode::INVALID_PARAMETER;        
@@ -449,9 +487,20 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
         status = hailo_init_configure_params(addedNetworkModel[HefObjSlot].hefObj, HAILO_STREAM_INTERFACE_PCIE, &configure_params);
         REQUIRE_SUCCESS_CHECK(status, l_exit, "Failed to hailo_init_configure_params");
 
+        //Set the batch size if greater than 1, otherwise just yse default which is 1
+        if (NewNetworkInfo.batch_size > 1) {
+            for (size_t i = 0; i < configure_params.network_group_params_count; i++) {
+                configure_params.network_group_params[i].batch_size = NewNetworkInfo.batch_size;
+            }
+        }
+
         // Allocate new stream object
         pHailoStreamInfoObj = new stHailoStreamInfo();
 
+        if (bAutoMultiDeviceScheduler) {
+            device_id = 0; //Always overwrite to 0 since multi-device is being automatically scheduled by HailoRT
+        }
+	
         pHailoStreamInfoObj->Device_Id = device_id;
         status = hailo_configure_vdevice(   vdevices[device_id], 
                                             addedNetworkModel[HefObjSlot].hefObj, 

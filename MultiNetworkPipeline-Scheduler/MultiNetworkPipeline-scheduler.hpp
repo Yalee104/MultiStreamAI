@@ -256,7 +256,7 @@ class MultiNetworkPipeline
      * operator.
      */
 private:
-                     
+    bool			                bAutoMultiDeviceScheduler = true;                 
     static MultiNetworkPipeline *   pinstance_;
     static std::mutex               mutex_class_protection;    
     size_t                          hailo_device_found;
@@ -310,12 +310,20 @@ public:
     MnpReturnCode ReleaseAllResource();
     
     /**
-     * Find and initialize hailo device
-     * NOTE: Only one device will be initialized and used in current release
+     * Config MultiNetworkPipeline, MUST be called before calling InitializeHailo!
+     * @param EnableAutoMultiDeviceScheduler	Enable or disable multi-device auto scheduler, if disabled then must manually assign device when calling AddNetwork
+     * @return SUCCESS, FAILED
+     */
+    MnpReturnCode Config(bool EnableAutoMultiDeviceScheduler);
+   
+    /**
+     * Find and initialize hailo device, can be called once only (anywhere)
      * @return Number of Hailo Device found
      */
     size_t InitializeHailo();
     
+    
+ 
     /**
      * Add new network, the network id_name MUST be unique  
      * @param device_id         is reserve for future use

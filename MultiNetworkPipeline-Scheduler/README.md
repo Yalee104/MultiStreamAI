@@ -19,11 +19,11 @@ and new feature set advantages.
 
 NOTE: 
 1. Please make sure to read .hpp file for API details.
-2. For sample workflow please refer to MNP_Unittest.cpp under Test folder or the tool demo app.
+2. For sample code workflow please refer to SimpleSample folder. Also check the video tutorial for more detail.
 3. MultiNetworkPipeline uses hpp file under Utils, just make sure it is included in you project.
 
 
-# Instruction to run UnitTest (with GoogleTest framework)
+# OPTIONAL: Instruction to run UnitTest (with GoogleTest framework)
 
 1. Install GoogleTest, please follow https://github.com/google/googletest/blob/master/googletest/README.md
 2. To build unittest ". build.sh"
