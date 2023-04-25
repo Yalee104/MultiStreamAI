@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(widget);
 
+    MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
+    pHailoPipeline->InitializeHailo();
 }
 
 MainWindow::~MainWindow()
