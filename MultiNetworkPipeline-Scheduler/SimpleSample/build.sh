@@ -7,7 +7,7 @@ declare -A COMPILER=( [x86_64]=/usr/bin/gcc
                       [armv7l]=/usr/bin/arm-linux-gnueabi-gcc )
 
 # Set path to hailort, please see README.md for detail
-HAILORT_VERSION=4.11.0
+HAILORT_VERSION=4.13.0
 HAILORT_INCLUDE=/usr/include/hailo/
 HAILORT_LIB=/usr/lib/
 
