@@ -3,10 +3,16 @@
 
 #include "Apps/appmanager.h"
 #include "streamview.h"
-#include "mediastream.h"
 #include <QMenu>
 #include <QObject>
 #include <QMediaPlayer>
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include "mediastreamQt6.h"
+#else
+#include "mediastream.h"
+#endif
+
 
 class VideoView : public StreamView
 {

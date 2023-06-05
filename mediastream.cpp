@@ -1,6 +1,7 @@
 #include "mediastream.h"
 #include <QDebug>
 
+
 MediaStream::MediaStream(QObject *parent) : QAbstractVideoSurface(parent)
 {
     //N/A

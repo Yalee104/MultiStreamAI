@@ -3,7 +3,6 @@
 #include <QDebug>
 #include <QtMath>
 #include <QMenu>
-#include <QCameraInfo>
 #include "videoview.h"
 #include "Apps/appcommon.h"
 

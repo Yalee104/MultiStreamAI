@@ -123,11 +123,13 @@ void VideoView::PlayerError(QMediaPlayer::Error error)
         msgBox.setText("There are not the appropriate permissions to play a media resource.");
         break;
     }
+    /*
     case QMediaPlayer::ServiceMissingError:
     {
         msgBox.setText("A valid playback service was not found, playback cannot proceed.");
         break;
     }
+    */
     default:
         bError = false;
         break;
@@ -169,7 +171,11 @@ void VideoView::loadSource(const QUrl &url)
         msgBox.exec();
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    m_MediaPlayer.setSource(QUrl(gstpipe));
+#else
     m_MediaPlayer.setMedia(QUrl(gstpipe));
+#endif
 
 #elif QT_ON_RK3588
 
@@ -193,11 +199,21 @@ void VideoView::loadSource(const QUrl &url)
         msgBox.exec();
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    m_MediaPlayer.setSource(QUrl(gstpipe));
+#else
     m_MediaPlayer.setMedia(QUrl(gstpipe));
+#endif
+
+
 
 #else
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    m_MediaPlayer.setSource(url);
+#else
     m_MediaPlayer.setMedia(url);
+#endif
 
 #endif
 
@@ -233,11 +249,17 @@ void VideoView::buildViewMenu()
         QAction* pPlay = m_ViewMenu.addAction("Play", &m_MediaPlayer, SLOT(play()));
         QAction* pPause = m_ViewMenu.addAction("Pause", &m_MediaPlayer, SLOT(pause()));
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        if (m_MediaPlayer.playbackState() == QMediaPlayer::PlayingState)
+            pPlay->setEnabled(false);
+        else
+            pPause->setEnabled(false);
+#else
         if (m_MediaPlayer.state() == QMediaPlayer::PlayingState)
             pPlay->setEnabled(false);
-
-        if (m_MediaPlayer.state() != QMediaPlayer::PlayingState)
+        else
             pPause->setEnabled(false);
+#endif
 
         //Add available App selection submenu from AppManager
         m_ViewMenu.addSeparator();

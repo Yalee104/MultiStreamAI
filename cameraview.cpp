@@ -90,7 +90,7 @@ QString CameraView::pixelFormatToString(QVideoFrame::PixelFormat pixelformatvalu
 
         //case QVideoFrame::Format_Y8: return QLatin1String("Y8");
         //case QVideoFrame::Format_Y16: return QLatin1String("Y16");
-        case QVideoFrame::Format_Jpeg: return QLatin1String("Jpeg");
+        //case QVideoFrame::Format_Jpeg: return QLatin1String("Jpeg");
         //case QVideoFrame::Format_CameraRaw: return QLatin1String("CameraRaw");
         //case QVideoFrame::Format_AdobeDng: return QLatin1String("AdobeDng");
         //case QVideoFrame::Format_ABGR32: return QLatin1String("ABGR32");
@@ -230,6 +230,14 @@ void CameraView::buildViewMenu()
 
             //Filter out the format we do not support
             if (pixelFormatToString(setting.pixelFormat()) == "Unknown")
+                continue;
+
+            //Filter out size that is greater than 1920 as performance won't be good and not necessary for such high resolution
+            if (setting.resolution().rwidth() > 1920)
+                continue;
+
+            //Filter out frame rate more than 30, we don't really need more than that
+            if (setting.maximumFrameRate() > 30)
                 continue;
 
             QString ResolutionFormat = QString("%1x%2 @%3 [%4]").arg(QString::number(setting.resolution().rwidth()),

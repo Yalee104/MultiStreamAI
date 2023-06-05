@@ -21,10 +21,8 @@ SOURCES += \
     Apps/appmanager.cpp \
     Utils/database/FaceDatabase.cpp \
     Utils/tracking/hailo_tracker.cpp \
-    cameraview.cpp \
     main.cpp \
     mainwindow.cpp \
-    mediastream.cpp \
     streamcontainer.cpp \
     streamview.cpp \
     videoview.cpp \
@@ -60,12 +58,20 @@ HEADERS += \
     Utils/tracking/jde_tracker/strack.hpp \
     Utils/tracking/jde_tracker/tracker_macros.hpp \
     Utils/yolo-nms-decoder/yolo_nms_decoder.hpp \
-    cameraview.h \
     mainwindow.h \
-    mediastream.h \
     streamcontainer.h \
     streamview.h \
     videoview.h \
+
+lessThan(QT_MAJOR_VERSION, 6): SOURCES +=   mediastream.cpp
+lessThan(QT_MAJOR_VERSION, 6): HEADERS +=   mediastream.h
+greaterThan(QT_MAJOR_VERSION, 5): SOURCES +=    mediastreamQt6.cpp
+greaterThan(QT_MAJOR_VERSION, 5): HEADERS +=    mediastreamQt6.h
+
+lessThan(QT_MAJOR_VERSION, 6): SOURCES +=   cameraview.cpp
+lessThan(QT_MAJOR_VERSION, 6): HEADERS +=   cameraview.h
+greaterThan(QT_MAJOR_VERSION, 5): SOURCES += cameraviewQt6.cpp
+greaterThan(QT_MAJOR_VERSION, 5): HEADERS += cameraviewQt6.h
 
 INCLUDEPATH += $$PWD/Utils/hailo-common
 INCLUDEPATH += $$PWD/Utils/tracking

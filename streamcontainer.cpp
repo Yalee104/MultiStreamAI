@@ -1,8 +1,14 @@
 #include "streamcontainer.h"
 #include <QMenu>
 #include <QDebug>
-#include "cameraview.h"
+#include <QFile>
 #include "videoview.h"
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include "cameraviewQt6.h"
+#else
+#include "cameraview.h"
+#endif
 
 #define STREAM_JSON_KEY_STREAM_DESCRIPTOR       "StreamDescriptor"
 #define STREAM_JSON_KEY_TYPE                    "Type"
@@ -35,6 +41,7 @@ StreamContainer::~StreamContainer()
 
 void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJsonConfigValue)
 {
+
     QJsonObject ConfigInfo = StreamJsonConfigValue.toObject();
 
     if (dynamic_cast<const VideoView*>(pStreamView) != nullptr) {
@@ -49,6 +56,36 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJso
         pVideoView->loadSource(QUrl(VideoUrl));
         pVideoView->SelectApp(SelectedAppName, SelectedNetworkName);
     }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+
+    if (dynamic_cast<const CameraView*>(pStreamView) != nullptr) {
+
+        CameraView* pCameraView = dynamic_cast<CameraView*>(pStreamView);
+
+        QString CameraDeviceID = ConfigInfo[STREAM_JSON_KEY_CAMERA_DEVICE_ID].toString();
+        int     CameraPixelFormat = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT].toInt();
+        int     CameraView_Width = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_WIDTH].toInt();
+        int     CameraView_Heights = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT].toInt();
+        float   CameraView_MaxFPS = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS].toDouble();
+        bool    CameraView_InvertImage = ConfigInfo[STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE].toBool();
+
+        QVideoFrameFormat::PixelFormat ePixelFormat = static_cast<QVideoFrameFormat::PixelFormat>(CameraPixelFormat);
+
+        pCameraView->StartCamera(   CameraDeviceID,
+                                    ePixelFormat,
+                                    QSize(CameraView_Width,CameraView_Heights),
+                                    CameraView_MaxFPS,
+                                    CameraView_InvertImage);
+
+
+        QString SelectedAppName = ConfigInfo[STREAM_JSON_KEY_APP_NAME_SELECTED].toString();
+        QString SelectedNetworkName = ConfigInfo[STREAM_JSON_KEY_APP_NETWORK_SELECTED].toString();
+
+        pCameraView->SelectApp(SelectedAppName, SelectedNetworkName);
+    }
+
+#else  //TODO
 
     if (dynamic_cast<const CameraView*>(pStreamView) != nullptr) {
 
@@ -75,6 +112,7 @@ void StreamContainer::ConfigStream(StreamView* pStreamView, QJsonValue StreamJso
 
         pCameraView->SelectApp(SelectedAppName, SelectedNetworkName);
     }
+#endif
 
 }
 
@@ -127,11 +165,20 @@ void StreamContainer::SaveStreamInfoToFile(QString FileName)
 
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_DEVICE_ID] = pCameraView->m_CameraUniqueDeviceName;
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                const QCameraFormat CameraViewSetting = pCameraView->getCameraViewFinderSettings();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT] = CameraViewSetting.pixelFormat();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_WIDTH] = CameraViewSetting.resolution().rwidth();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT] = CameraViewSetting.resolution().rheight();
+                CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS] = CameraViewSetting.maxFrameRate();
+#else
                 const QCameraViewfinderSettings CameraViewSetting = pCameraView->getCameraViewFinderSettings();
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_PIXEL_FORMAT] = CameraViewSetting.pixelFormat();
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_WIDTH] = CameraViewSetting.resolution().rwidth();
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_HEIGHT] = CameraViewSetting.resolution().rheight();
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_MAX_FPS] = CameraViewSetting.maximumFrameRate();
+#endif
+
                 CameraJsonObj[STREAM_JSON_KEY_CAMERA_VIEW_INVERT_IMAGE] = pCameraView->m_InvertImage;
 
                 CameraJsonObj[STREAM_JSON_KEY_APP_NAME_SELECTED] = pCameraView->GetSelectedAppName();

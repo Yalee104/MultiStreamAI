@@ -6,7 +6,8 @@
 #include <QMenu>
 #include <QObject>
 #include <QCamera>
-#include <QCameraInfo>
+#include <QCameraFormat>
+#include <QMediaCaptureSession>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include "mediastreamQt6.h"
@@ -22,15 +23,21 @@ public:
     CameraView(QString NewID, QWidget *parent = nullptr, int viewSizeMinW = 160, int viewSizeMinH = 160);
     ~CameraView();
 
-    void        StartCamera(QString CameraDeviceName, bool ImageInverted);
-    void        ConfigCameraView(QCameraViewfinderSettings ViewSettings);
+    void        StartCamera(const QCameraDevice &cameraDevice, bool ImageInverted);
+    void        StartCamera(const QString CamID,
+                            QVideoFrameFormat::PixelFormat PixelFormat,
+                            const QSize &FrameSize,
+                            float FrameRate,
+                            bool ImageInverted);
+
+    void        ConfigCameraView(const QCameraFormat &ViewSettings);
     QString     GetSelectedAppName();
     QString     GetSelectedNetworkName();
     void        SelectApp(QString AppName, QString NetworkName);
     void        changeTargetFPS(int FPS) override;
 
-    QString pixelFormatToString( QVideoFrame::PixelFormat pixelformatvalue );
-    const QCameraViewfinderSettings getCameraViewFinderSettings();
+    QString pixelFormatToString( QVideoFrameFormat::PixelFormat pixelformatvalue );
+    const QCameraFormat getCameraViewFinderSettings();
 
 signals:
     Q_INVOKABLE void sendMouseEvent(QMouseEvent * e, QString ID);
@@ -39,7 +46,6 @@ public slots:
     void CameraSelectionTrigger(QAction *action);
     void CameraResSelectionTrigger(QAction *action);
 
-    void CameraStatusChanged(QCamera::Status status);
     void CameraInvertImage(bool isChecked);
     void DeleteCameraViewRequest();
     void UpdateImageToView(const QImage& frame, const QList<QGraphicsItem*> &overlayItems);
@@ -48,6 +54,7 @@ protected:
     void mousePressEvent(QMouseEvent * e);
     void buildViewMenu();
     void ReleaseCamera();
+    bool CameraFormatSupported(const QCameraFormat &CameraFormat);
 
 public:
     bool            m_Loop = true;
@@ -57,6 +64,7 @@ public:
 protected:
     QMenu           m_ViewMenu;
     QCamera*        m_pCamera = nullptr;
+    QMediaCaptureSession* m_captureSession = nullptr;
     MediaStream     m_MediaStream;
     AppManager      m_AppManager;
 
