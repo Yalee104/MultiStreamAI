@@ -13,6 +13,7 @@
 
 #include "MultiNetworkPipeline-scheduler.hpp"
 
+#define	VERSION	"2023-04-26"
 
 /**
  * Static methods should be defined outside the class.
