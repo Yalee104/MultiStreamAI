@@ -82,6 +82,15 @@ void AppManager::LaunchApp(QString AppName, QString NetworkName)
         StartApp(ClassName);
     }
 
+    if (AppName.compare(Segmentation::AppName()) == 0) {
+        QByteArray ClassName = m_AppsFactory.registerObject<Segmentation>();
+        StartApp(ClassName);
+
+        Segmentation* pSegmentation = dynamic_cast<Segmentation*>(m_pAppRunnableObject);
+        if (pSegmentation)
+            pSegmentation->SelectNetwork(NetworkName);
+    }
+
 }
 
 
