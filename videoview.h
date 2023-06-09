@@ -33,7 +33,11 @@ public slots:
     void ViewMenu_ChoseVideoSource();
     void ViewMenu_StreamingLinkInput();
     void PlayerStatusChanged(QMediaPlayer::MediaStatus state);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void PlayerError(QMediaPlayer::Error error, const QString &errorString);
+#else
     void PlayerError(QMediaPlayer::Error error);
+#endif
     void DeleteVideoViewRequest();
     void UpdateImageToView(const QImage& frame, const QList<QGraphicsItem*> &overlayItems);
 

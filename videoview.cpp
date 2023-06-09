@@ -16,8 +16,12 @@ VideoView::VideoView(QString NewID, QWidget *parent, int viewSizeMinW, int viewS
     m_AppManager.m_AppID = NewID;
 
     connect(&m_MediaPlayer, SIGNAL(mediaStatusChanged(QMediaPlayer::MediaStatus)), this, SLOT(PlayerStatusChanged(QMediaPlayer::MediaStatus)));
-    connect(&m_MediaPlayer, SIGNAL(error(QMediaPlayer::Error)), this, SLOT(PlayerError(QMediaPlayer::Error)));
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    connect(&m_MediaPlayer, &QMediaPlayer::errorOccurred, this, &VideoView::PlayerError);
+#else
+    connect(&m_MediaPlayer, SIGNAL(error(QMediaPlayer::Error)), this, SLOT(PlayerError(QMediaPlayer::Error)));
+#endif
     connect(&m_MediaStream, &MediaStream::sendImage, [this](const QImage& frame) {
 
         if (m_AppManager.AppSelected() == false)
@@ -102,7 +106,11 @@ void VideoView::PlayerStatusChanged(QMediaPlayer::MediaStatus Status)
     }
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void VideoView::PlayerError(QMediaPlayer::Error error, const QString &errorString)
+#else
 void VideoView::PlayerError(QMediaPlayer::Error error)
+#endif
 {
     bool bError = true;
     QMessageBox msgBox;
@@ -123,13 +131,7 @@ void VideoView::PlayerError(QMediaPlayer::Error error)
         msgBox.setText("There are not the appropriate permissions to play a media resource.");
         break;
     }
-    /*
-    case QMediaPlayer::ServiceMissingError:
-    {
-        msgBox.setText("A valid playback service was not found, playback cannot proceed.");
-        break;
-    }
-    */
+
     default:
         bError = false;
         break;
@@ -149,6 +151,17 @@ void VideoView::loadSource(const QUrl &url)
     //qDebug() << url.host();
     //qDebug() << url.port();
     //qDebug() << url.toString(QUrl::FullyEncoded);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    m_MediaPlayer.setSource(url);
+
+#ifndef QT_ON_x86
+    qDebug() << "WARNING FOR NON X86: On QT6 backend plugin (eg, using gst-pipeline) is NOT longer supported, do expect video decode performance degradation";
+    qDebug() << "Suggest to use QT5 instead!";
+#endif
+
+#else //QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+
 
 #ifdef QT_ON_JETSON
 
@@ -171,11 +184,7 @@ void VideoView::loadSource(const QUrl &url)
         msgBox.exec();
     }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    m_MediaPlayer.setSource(QUrl(gstpipe));
-#else
     m_MediaPlayer.setMedia(QUrl(gstpipe));
-#endif
 
 #elif QT_ON_RK3588
 
@@ -199,23 +208,16 @@ void VideoView::loadSource(const QUrl &url)
         msgBox.exec();
     }
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    m_MediaPlayer.setSource(QUrl(gstpipe));
-#else
     m_MediaPlayer.setMedia(QUrl(gstpipe));
-#endif
-
-
 
 #else
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    m_MediaPlayer.setSource(url);
-#else
     m_MediaPlayer.setMedia(url);
-#endif
 
 #endif
+
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+
 
     m_SelectedMediaUrl = url;
     m_MediaPlayer.setPlaybackRate(1.0);
