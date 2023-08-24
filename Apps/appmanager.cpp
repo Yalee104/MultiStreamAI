@@ -4,6 +4,8 @@
 #include "Apps/ObjectDetection/objectdetection.h"
 #include "Apps/Segmentation/segmentation.h"
 #include "Apps/FaceRecognition/faceRecognition.h"
+#include "Apps/LPR/Lpr.h"
+
 
 AppManager::AppManager(QObject *parent)
     : QObject{parent}
@@ -82,6 +84,11 @@ void AppManager::LaunchApp(QString AppName, QString NetworkName)
         StartApp(ClassName);
     }
 
+    if (AppName.compare(LPR::AppName()) == 0) {
+        QByteArray ClassName = m_AppsFactory.registerObject<LPR>();
+        StartApp(ClassName);
+    }
+
     if (AppName.compare(Segmentation::AppName()) == 0) {
         QByteArray ClassName = m_AppsFactory.registerObject<Segmentation>();
         StartApp(ClassName);
@@ -123,6 +130,13 @@ void AppManager::ReGenerateMenu()
     pFaceRecognition->setText(FaceRecognition::AppName());
     pFaceRecognition->setData(ClassName);
     m_pAppMenu->addAction(pFaceRecognition);
+
+    //Register Apps: LPR
+    ClassName = m_AppsFactory.registerObject<LPR>();
+    QAction *pLPR = new QAction(m_pAppMenu);
+    pLPR->setText(LPR::AppName());
+    pLPR->setData(ClassName);
+    m_pAppMenu->addAction(pLPR);
 
     //To add more Apps simply copy any of above register apps and make
     //necessary changes to reflect the added app class

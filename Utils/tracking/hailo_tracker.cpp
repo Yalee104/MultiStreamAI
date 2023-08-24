@@ -72,6 +72,18 @@ void HailoTracker::add_object_to_track(std::string name, int track_id, HailoObje
     }
 }
 
+bool HailoTracker::is_object_tracked(std::string name, int track_id)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    STrack *tracked_detection = priv->trackers[name].get_detection_with_id(track_id);
+    if (nullptr != tracked_detection)
+    {
+        return true;
+    }
+    return false;
+}
+
+
 void HailoTracker::remove_classifications_from_track(std::string name, int track_id, std::string classifier_type)
 {
     std::lock_guard<std::mutex> lock(mutex_);

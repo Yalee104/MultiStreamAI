@@ -48,6 +48,7 @@ public:
     void remove_jde_tracker(std::string name);
     std::vector<HailoDetectionPtr> update(std::string name, std::vector<HailoDetectionPtr> &inputs);
     void add_object_to_track(std::string name, int id, HailoObjectPtr obj);
+    bool is_object_tracked(std::string name, int id);
     void remove_classifications_from_track(std::string name, int track_id, std::string classifier_type);
 
     // Setters for members accessible at element-property level

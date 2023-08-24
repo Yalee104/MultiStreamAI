@@ -979,10 +979,11 @@ protected:
     int m_user_int;
     std::string m_user_string;
     float m_user_float;
+    int m_user_id;
 
 public:
     HailoUserMeta() {};
-    HailoUserMeta(int user_int, std::string user_string, float user_float) : m_user_int(user_int), m_user_string(user_string), m_user_float(user_float) {};
+    HailoUserMeta(int user_int, std::string user_string, float user_float, int user_id = 0) : m_user_int(user_int), m_user_string(user_string), m_user_float(user_float), m_user_id(user_id) {};
 
     virtual hailo_object_t get_type()
     {
@@ -1005,6 +1006,11 @@ public:
         std::lock_guard<std::mutex> lock(*mutex);
         return m_user_int;
     }
+    int get_user_id()
+    {
+        std::lock_guard<std::mutex> lock(*mutex);
+        return m_user_id;
+    }
     void set_user_float(float user_float)
     {
         std::lock_guard<std::mutex> lock(*mutex);
@@ -1019,6 +1025,11 @@ public:
     {
         std::lock_guard<std::mutex> lock(*mutex);
         m_user_int = user_int;
+    }
+    void set_user_id(int user_id)
+    {
+        std::lock_guard<std::mutex> lock(*mutex);
+        m_user_id = user_id;
     }
 };
 using HailoUserMetaPtr = std::shared_ptr<HailoUserMeta>;
