@@ -70,6 +70,9 @@
 #define MAX_SUPPORTED_INPUT_LAYER           (4)
 #define MAX_SUPPORTED_OUTPUT_LAYER          (16)
 
+#define INPUT_INFER_QUEUE_SIZE              (20)
+#define OUTPUT_INFER_QUEUE_SIZE             (20)
+
 
 #define REQUIRE_SUCCESS_CHECK(status, label, msg) \
     do                                      \

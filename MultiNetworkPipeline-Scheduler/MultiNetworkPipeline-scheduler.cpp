@@ -551,9 +551,8 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
             if (bUseDefaultInputOrder)
             {
 
-#ifdef LARGE_INFER_QUEUE_FOR_UNIT_TEST
-                pHailoStreamInfoObj->NetVstreamInputParam[i].params.queue_size = 20;
-#endif
+                pHailoStreamInfoObj->NetVstreamInputParam[i].params.queue_size = INPUT_INFER_QUEUE_SIZE;
+
                 status = hailo_create_input_vstreams(   pHailoStreamInfoObj->NetworkGroups,
                                                         &pHailoStreamInfoObj->NetVstreamInputParam[i],
                                                         1, 
@@ -623,6 +622,9 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
 
             if (bUseDefaultOutputOrder)
             {
+
+                pHailoStreamInfoObj->NetVstreamOutputParam[i].params.queue_size = OUTPUT_INFER_QUEUE_SIZE;
+
                 status = hailo_create_output_vstreams(  pHailoStreamInfoObj->NetworkGroups,
                                                         &pHailoStreamInfoObj->NetVstreamOutputParam[i],
                                                         1, 
@@ -639,6 +641,10 @@ MnpReturnCode MultiNetworkPipeline::AddNetwork(uint32_t device_id, const stNetwo
                 {
                     if (strcmp(pHailoStreamInfoObj->NetVstreamOutputParam[j].name, NewNetworkInfo.output_order_by_name[i].c_str()) == 0)
                     {
+#ifdef LARGE_INFER_QUEUE_FOR_UNIT_TEST
+                        pHailoStreamInfoObj->NetVstreamOutputParam[j].params.queue_size = 20;
+#endif
+
                         status = hailo_create_output_vstreams(  pHailoStreamInfoObj->NetworkGroups,
                                                                 &pHailoStreamInfoObj->NetVstreamOutputParam[j],
                                                                 1, 
