@@ -16,34 +16,17 @@
 #include <QDebug>
 #include <QThread>
 
-struct FaceRecognitionInfo {
-    std::string                 ModelID;
-    std::string                 AppID;
-    int                         NetworkInputHeight;
-    int                         NetworkInputWidth;
-    int                         NetworkInputSize;
-    hailo_format_type_t         OutputFormat;
-    std::vector<qp_zp_scale_t>  QuantizationInfo;
-    float                       scaledRatioWidth;
-    float                       scaledRatioHeight;
-    float                       PerformaceFPS;
 
-    std::vector<uint8_t>                ImageInputRaw;
-    std::vector<std::vector<float32_t>> OutputBufferFloat32;
-    std::vector<std::vector<uint8_t>>   OutputBufferUint8;
+void Arface_BuildFaceDB(const QString &FaceDBPath, NetworkInferenceBasedObjInfo* pInitData);
 
-};
+int Arcface_Initialize(NetworkInferenceBasedObjInfo* pFaceInfo, std::string AppID);
 
-void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitData);
+void ArcFace_InferWorker(NetworkInferenceBasedObjInfo* pFaceInfo, NetworkInferenceDetectionObjInfo* pDetectionInfo, AppImageData* pDetectionData);
 
-int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID);
+void ArcFace_ReadOutputWorker(NetworkInferenceBasedObjInfo* pFaceInfo, NetworkInferenceDetectionObjInfo* pDetectionInfo, AppImageData* pData);
 
-void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pDetectionInfo, ObjectDetectionData* pDetectionData);
+void ArcFace_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionData* pData);
-
-void ArcFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
-
-void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, FaceRecognitionInfo* pInitData);
+void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, NetworkInferenceBasedObjInfo* pInitData);
 
 #endif // ARCFACE_PROCESS_H

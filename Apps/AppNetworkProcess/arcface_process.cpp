@@ -71,7 +71,7 @@ cv::Mat ResizeAspectRatioFit( const cv::Mat& img, int target_width = 640, int ta
 }
 
 
-void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitData)
+void Arface_BuildFaceDB(const QString &FaceDBPath, NetworkInferenceBasedObjInfo* pInitData)
 {
     Timer   TimerCheck;
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
@@ -150,7 +150,7 @@ void Arface_BuildFaceDB(const QString &FaceDBPath, FaceRecognitionInfo* pInitDat
 }
 
 #if 1
-void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, FaceRecognitionInfo* pInitData)
+void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, NetworkInferenceBasedObjInfo* pInitData)
 {
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
@@ -229,7 +229,7 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 #else
 
 
-void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, FaceRecognitionInfo* pInitData)
+void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, NetworkInferenceBasedObjInfo* pInitData)
 {
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
@@ -284,7 +284,7 @@ void Arcface_Test(const QString &TestImagePath, const QString &ImageFileName, Fa
 #endif
 
 
-int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID) {
+int Arcface_Initialize(NetworkInferenceBasedObjInfo* pFaceInfo, std::string AppID) {
     //qDebug() << "Arcface_Initialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -321,7 +321,7 @@ int Arcface_Initialize(FaceRecognitionInfo* pFaceInfo, std::string AppID) {
     return 0;
 }
 
-void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pDetectionInfo, ObjectDetectionData* pDetectionData)
+void ArcFace_InferWorker(NetworkInferenceBasedObjInfo* pFaceInfo, NetworkInferenceDetectionObjInfo* pDetectionInfo, AppImageData* pDetectionData)
 {
     //qDebug() << "ArcFace_InferWorker";
     bool NewTrackObjFound = false;
@@ -332,8 +332,7 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
 
     //TODO: We should filter out class that is not face so that it does not go into tracker to save time especially when
     //      there is multi-stream.
-    std::vector<HailoDetectionPtr> FaceTracker = HailoTracker::GetInstance().update(pFaceInfo->AppID, pDetectionData->DecodedResult);
-
+    std::vector<HailoDetectionPtr> FaceTracker = HailoTracker::GetInstance().update(pFaceInfo->AppID, pDetectionInfo->DecodedResult);
 
     for (HailoDetectionPtr  &tracker : FaceTracker) {
 
@@ -362,13 +361,13 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
         }
     }
 
-    pDetectionData->DecodedResult = FaceTracker; //Replace with updated one
+    pDetectionInfo->DecodedResult = FaceTracker; //Replace with updated one
 
 #else
 
     //Without tracker we will simply have to pass all face object for inference
     NewTrackObjFound = true;
-    for (HailoDetectionPtr  &tracker : pDetectionData->DecodedResult) {
+    for (HailoDetectionPtr  &tracker : pDetectionInfo->DecodedResult) {
         //Here we only check for face class
         if (tracker->get_class_id() != YOLO_PERSONFACE_FACE_CLASS_ID)
             continue;
@@ -385,7 +384,7 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
 
     //For all face class we cropp the face and infer
     bool bDataSentForInfer = false;
-    for (HailoDetectionPtr  &tracker : pDetectionData->DecodedResult) {
+    for (HailoDetectionPtr  &tracker : pDetectionInfo->DecodedResult) {
 
         if (tracker->get_class_id() == YOLO_PERSONFACE_FACE_CLASS_ID) {
 
@@ -440,16 +439,16 @@ void ArcFace_InferWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionInfo* pD
         TimerCheck.reset();
 }
 
-void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionData* pData) {
+void ArcFace_ReadOutputWorker(NetworkInferenceBasedObjInfo* pFaceInfo, NetworkInferenceDetectionObjInfo* pDetectionInfo, AppImageData* pData) {
 
     //qDebug() << "ArcFace_ReadOutputWorker";
     Timer   TimerCheck;
     MnpReturnCode ReadOutRet = MnpReturnCode::NO_DATA_AVAILABLE;
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
 
-    //for (int k= 0; k < pData->DecodedResult.size(); k++) {
-    //    HailoDetectionPtr tracker = pData->DecodedResult[k];
-    for (HailoDetectionPtr  &tracker : pData->DecodedResult) {
+    //for (int k= 0; k < pDetectionInfo->DecodedResult.size(); k++) {
+    //    HailoDetectionPtr tracker = pDetectionInfo->DecodedResult[k];
+    for (HailoDetectionPtr  &tracker : pDetectionInfo->DecodedResult) {
 
         if (tracker->get_class_id() == YOLO_PERSONFACE_FACE_CLASS_ID) {
 
@@ -486,11 +485,11 @@ void ArcFace_ReadOutputWorker(FaceRecognitionInfo* pFaceInfo, ObjectDetectionDat
     }
 }
 
-void ArcFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void ArcFace_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
-    int totalDetections = pData->DecodedResult.size();
+    int totalDetections = pInfo->DecodedResult.size();
     QPainter qPainter(&pData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
@@ -503,23 +502,23 @@ void ArcFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pD
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k]->get_confidence() < 0.4)
+        if (pInfo->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
-        if (pData->DecodedResult[k]->get_class_id() != YOLO_PERSONFACE_FACE_CLASS_ID)
+        if (pInfo->DecodedResult[k]->get_class_id() != YOLO_PERSONFACE_FACE_CLASS_ID)
             continue;
 
-        qPainter.drawRect(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
-                            pData->DecodedResult[k]->get_bbox().width()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().height()*heightScale);
+        qPainter.drawRect(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pInfo->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().height()*heightScale);
 
-        std::vector<HailoObjectPtr> ObjPtr = pData->DecodedResult[k]->get_objects_typed(HAILO_USER_META);
+        std::vector<HailoObjectPtr> ObjPtr = pInfo->DecodedResult[k]->get_objects_typed(HAILO_USER_META);
         if (ObjPtr.size()) {
             HailoUserMetaPtr UserMetaPtr = std::dynamic_pointer_cast<HailoUserMeta>(ObjPtr[0]);
 
-            qPainter.drawText(pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                              pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
+            qPainter.drawText(pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                              pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
                               QString::fromStdString(UserMetaPtr->get_user_string()));
         }
 

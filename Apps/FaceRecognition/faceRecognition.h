@@ -29,18 +29,14 @@ public slots:
 
     void ReloadFaceDatabase();
 
-signals:
-
-    void SendToInfer(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
-
 protected:
 
-    QMenu*                          pSubMenu = nullptr;
-    ObjectDetectionInfo*            pObjDetInfo = nullptr;
-    FaceRecognitionInfo*            pArcFaceInfo = nullptr;
-    QMutex                          ResourceLock;
-    bool                            bFrameInProcess = false;
-    float                           FrameCount;
+    QMenu*                              pSubMenu = nullptr;
+    NetworkInferenceDetectionObjInfo*   pObjDetInfo = nullptr;
+    NetworkInferenceBasedObjInfo*       pArcFaceInfo = nullptr;
+    QMutex                              ResourceLock;
+    bool                                bFrameInProcess = false;
+    float                               FrameCount;
 
 };
 

@@ -3,10 +3,10 @@
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void yolov5_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
-int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
+int Yolov5mInitialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -36,7 +36,7 @@ int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID) {
 }
 
 
-void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -72,7 +72,7 @@ void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 }
 
 
-void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5mReadOutput";
 
@@ -91,17 +91,17 @@ void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
         //timer.start();
 
-        pData->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
+        pInfo->DecodedResult = Yolov5mDecode(pInfo, pInfo->OutputBufferUint8);
         //qDebug() << "output readed at " << timer.nsecsElapsed();
-        //qDebug() << "decoded result: " << pData->DecodedResult.size();
+        //qDebug() << "decoded result: " << pInfo->DecodedResult.size();
     }
 }
 
-void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
-    int totalDetections = pData->DecodedResult.size();
+    int totalDetections = pInfo->DecodedResult.size();
     QPainter qPainter(&pData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
@@ -114,25 +114,25 @@ void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k]->get_confidence() < 0.4)
+        if (pInfo->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
-        qPainter.drawRect(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
-                            pData->DecodedResult[k]->get_bbox().width()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().height()*heightScale);
+        qPainter.drawRect(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pInfo->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
     }
 
     qPainter.end();
 
-    //yolov5_print_output_result(pInfo, totalDetections, pData->DecodedResult);
+    //yolov5_print_output_result(pInfo, totalDetections, pInfo->DecodedResult);
 
 }
 
 
-std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov5mDecode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5mDecode";
 
     static bool Initialized = false;
@@ -254,7 +254,7 @@ std::string get_coco_name_from_int(int cls)
     return result;
 }
 
-void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void yolov5_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -290,7 +290,7 @@ void yolov5_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detecti
 
 }
 
-int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData) {
+int Yolov5mShareDataCleanUp(AppImageData* pShareData) {
     //qDebug() << "Yolov5mShareDataCleanUp";
 
     delete pShareData;

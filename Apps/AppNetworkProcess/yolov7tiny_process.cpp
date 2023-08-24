@@ -1,12 +1,11 @@
-#include "yolov7_process.h"
+#include "yolov7tiny_process.h"
 
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov7_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void yolov7Tiny_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
-
-int Yolov7_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID) {
+int Yolov7Tiny_Initialize(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -21,22 +20,22 @@ int Yolov7_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string A
     Network.out_format = HAILO_FORMAT_TYPE_UINT8;
     pHailoPipeline->AddNetwork(0, Network, AppID);
 
-    pInitData->ModelID = Network.id_name;
-    pInitData->AppID = AppID;
-    pInitData->OutputFormat = Network.out_format;
-    pInitData->NetworkInputHeight = 640;
-    pInitData->NetworkInputWidth = 640;
-    pInitData->NetworkInputSize = pInitData->NetworkInputHeight*pInitData->NetworkInputWidth*3; //RGB channel
+    pVehicleObjInfo->ModelID = Network.id_name;
+    pVehicleObjInfo->AppID = AppID;
+    pVehicleObjInfo->OutputFormat = Network.out_format;
+    pVehicleObjInfo->NetworkInputHeight = 640;
+    pVehicleObjInfo->NetworkInputWidth = 640;
+    pVehicleObjInfo->NetworkInputSize = pVehicleObjInfo->NetworkInputHeight*pVehicleObjInfo->NetworkInputWidth*3; //RGB channel
 
-    pHailoPipeline->GetNetworkQuantizationInfo(pInitData->ModelID, pInitData->QuantizationInfo);
+    pHailoPipeline->GetNetworkQuantizationInfo(pVehicleObjInfo->ModelID, pVehicleObjInfo->QuantizationInfo);
 
-    pHailoPipeline->InitializeOutputBuffer<uint8_t>(pInitData->ModelID, pInitData->OutputBufferUint8, AppID);
+    pHailoPipeline->InitializeOutputBuffer<uint8_t>(pVehicleObjInfo->ModelID, pVehicleObjInfo->OutputBufferUint8, AppID);
 
     return 0;
 }
 
 
-void Yolov7_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
+void Yolov7Tiny_InferWorker(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, AppImageData* pImageData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -46,16 +45,16 @@ void Yolov7_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* p
     //      2. Faster way to assign image raw data
     //      NOTE: We won't be able to move the ImageInputRaw to pInitData since infer could happen in parallel so it has to be independent
     //QImage scaledImage = inferImage.scaled(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, Qt::KeepAspectRatio, Qt::FastTransformation);
-    QImage scaledImage = pData->VisualizedImage.scaled(pInfo->NetworkInputWidth, pInfo->NetworkInputHeight, Qt::KeepAspectRatio);
+    QImage scaledImage = pImageData->VisualizedImage.scaled(pVehicleObjInfo->NetworkInputWidth, pVehicleObjInfo->NetworkInputHeight, Qt::KeepAspectRatio);
 
     //qDebug() << "Scaled image size in byte: " << scaledImage.sizeInBytes();
     //qDebug() << "Scaled image size: " << scaledImage.width() << ", " << scaledImage.height();
-    //qDebug() << "original image size: " << pData->VisualizedImage.width() << ", " << pData->VisualizedImage.height();
-    //qDebug() << "ImageInpuitRaw buffer size: " <<pInfo->ImageInputRaw.size();
+    //qDebug() << "original image size: " << pImageData->VisualizedImage.width() << ", " << pImageData->VisualizedImage.height();
+    //qDebug() << "ImageInpuitRaw buffer size: " <<pVehicleObjInfo->ImageInputRaw.size();
 
     //TODO: Should not need to calculate this every time, only when resolution changes, move to more appropriate place
-    pInfo->scaledRatioWidth = (float)pData->VisualizedImage.width() / (float)scaledImage.width();
-    pInfo->scaledRatioHeight = (float)pData->VisualizedImage.height() / (float)scaledImage.height();
+    pVehicleObjInfo->scaledRatioWidth = (float)pImageData->VisualizedImage.width() / (float)scaledImage.width();
+    pVehicleObjInfo->scaledRatioHeight = (float)pImageData->VisualizedImage.height() / (float)scaledImage.height();
 
     const uchar* pImagedata = scaledImage.bits();
 
@@ -63,16 +62,17 @@ void Yolov7_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* p
     //      1. the scaled image aspect ratio fit size in byte could be smaller than input network size as it will not pad
     //      2. the assign automatically rescale base on the total item it is assigned
     //      3. so we need to resize to add/pad the remaining item (and set it to 0) to make it the same as network input size.
-    pInfo->ImageInputRaw.assign(pImagedata, pImagedata+scaledImage.sizeInBytes());
-    pInfo->ImageInputRaw.resize(pInfo->NetworkInputSize, 0);
+    pVehicleObjInfo->ImageInputRaw.assign(pImagedata, pImagedata+scaledImage.sizeInBytes());
+    pVehicleObjInfo->ImageInputRaw.resize(pVehicleObjInfo->NetworkInputSize, 0);
 
 
-    pHailoPipeline->Infer(pInfo->ModelID, pInfo->ImageInputRaw, pInfo->AppID);
+    pHailoPipeline->Infer(pVehicleObjInfo->ModelID, pVehicleObjInfo->ImageInputRaw, pVehicleObjInfo->AppID);
 
 }
 
 
-void Yolov7_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
+void Yolov7Tiny_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, AppImageData* pImageData)
+{
 
 
     Timer   TimerCheck;
@@ -81,8 +81,8 @@ void Yolov7_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageDa
 
     QElapsedTimer timer;
 
-    if (pInfo->OutputFormat == HAILO_FORMAT_TYPE_UINT8)
-        ReadOutRet = pHailoPipeline->ReadOutputById(pInfo->ModelID, pInfo->OutputBufferUint8, pInfo->AppID);
+    if (pVehicleObjInfo->OutputFormat == HAILO_FORMAT_TYPE_UINT8)
+        ReadOutRet = pHailoPipeline->ReadOutputById(pVehicleObjInfo->ModelID, pVehicleObjInfo->OutputBufferUint8, pVehicleObjInfo->AppID);
     else //Must be float 32
         qDebug() << "WARNING: Output HAILO_FORMAT_TYPE_FLOAT32 NOT YET SUPPORTED";
 
@@ -90,48 +90,51 @@ void Yolov7_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageDa
 
         //timer.start();
 
-        pInfo->DecodedResult = Yolov7_Decode(pInfo, pInfo->OutputBufferUint8);
+        pVehicleObjInfo->DecodedResult = Yolov7Tiny_Decode(pVehicleObjInfo, pVehicleObjInfo->OutputBufferUint8);
         //qDebug() << "output readed at " << timer.nsecsElapsed();
-        //qDebug() << "decoded result: " << pInfo->DecodedResult.size();
+        //qDebug() << "decoded result: " << pVehicleObjInfo->DecodedResult.size();
     }
 }
 
-void Yolov7_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
-    //qDebug() << "Yolov5mVisualize";
+void Yolov7Tiny_VisualizeWorker(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, AppImageData* pImageData)
+{
 
-    int totalDetections = pInfo->DecodedResult.size();
-    QPainter qPainter(&pData->VisualizedImage);
+    //qDebug() << "Yolov7Tiny_VisualizeWorker";
+
+    int totalDetections = pVehicleObjInfo->DecodedResult.size();
+    QPainter qPainter(&pImageData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
     QFont font;
     font.setPixelSize(24);
     qPainter.setFont(font);
 
-    float widthScale = (float)pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
-    float heightScale = (float)pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
+    float widthScale = (float)pVehicleObjInfo->NetworkInputWidth * pVehicleObjInfo->scaledRatioWidth;
+    float heightScale = (float)pVehicleObjInfo->NetworkInputHeight * pVehicleObjInfo->scaledRatioHeight;
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pInfo->DecodedResult[k]->get_confidence() < 0.4)
+        if (pVehicleObjInfo->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
-        qPainter.drawRect(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                            pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
-                            pInfo->DecodedResult[k]->get_bbox().width()*widthScale,
-                            pInfo->DecodedResult[k]->get_bbox().height()*heightScale);
+        qPainter.drawRect(  pVehicleObjInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pVehicleObjInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pVehicleObjInfo->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pVehicleObjInfo->DecodedResult[k]->get_bbox().height()*heightScale);
 
-        qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
+        qPainter.drawText(5,25, QString("FPS: ") + QString::number(pVehicleObjInfo->PerformaceFPS, 'g', 4));
     }
 
     qPainter.end();
 
-    //yolov7_print_output_result(pInfo, totalDetections, pInfo->DecodedResult);
+    //yolov7Tiny_print_output_result(pVehicleObjInfo, totalDetections, pVehicleObjInfo->DecodedResult);
 
 }
 
 
-std::vector<HailoDetectionPtr> Yolov7_Decode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov7Tiny_Decode(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, std::vector<std::vector<uint8_t>> &OutputForDecode)
+{
     //qDebug() << "Yolov5mDecode";
 
     static bool Initialized = false;
@@ -143,19 +146,19 @@ std::vector<HailoDetectionPtr> Yolov7_Decode(NetworkInferenceDetectionObjInfo* p
     if (Initialized == false) {
 
         QunatizationInfo quantInfo;
-        Yolov7Decoder.YoloConfig(pInitData->NetworkInputWidth, pInitData->NetworkInputHeight, YOLOV7_TOTAL_CLASS, YOLOV7_CONFIDENCE_THRS);
+        Yolov7Decoder.YoloConfig(pVehicleObjInfo->NetworkInputWidth, pVehicleObjInfo->NetworkInputHeight, YOLOV7_TINY_TOTAL_CLASS, YOLOV7_TINY_CONFIDENCE_THRS);
 
-        quantInfo.qp_scale = pInitData->QuantizationInfo[0].qp_scale;
-        quantInfo.qp_zp = pInitData->QuantizationInfo[0].qp_zp;
-        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE1, YOLOV7_FEATURE_MAP_SIZE1, anchors1, &quantInfo);
+        quantInfo.qp_scale = pVehicleObjInfo->QuantizationInfo[0].qp_scale;
+        quantInfo.qp_zp = pVehicleObjInfo->QuantizationInfo[0].qp_zp;
+        Yolov7Decoder.YoloAddOutput(YOLOV7_TINY_FEATURE_MAP_SIZE1, YOLOV7_TINY_FEATURE_MAP_SIZE1, anchors1, &quantInfo);
 
-        quantInfo.qp_scale = pInitData->QuantizationInfo[1].qp_scale;
-        quantInfo.qp_zp = pInitData->QuantizationInfo[1].qp_zp;
-        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE2, YOLOV7_FEATURE_MAP_SIZE2, anchors2, &quantInfo);
+        quantInfo.qp_scale = pVehicleObjInfo->QuantizationInfo[1].qp_scale;
+        quantInfo.qp_zp = pVehicleObjInfo->QuantizationInfo[1].qp_zp;
+        Yolov7Decoder.YoloAddOutput(YOLOV7_TINY_FEATURE_MAP_SIZE2, YOLOV7_TINY_FEATURE_MAP_SIZE2, anchors2, &quantInfo);
 
-        quantInfo.qp_scale = pInitData->QuantizationInfo[2].qp_scale;
-        quantInfo.qp_zp = pInitData->QuantizationInfo[2].qp_zp;
-        Yolov7Decoder.YoloAddOutput(YOLOV7_FEATURE_MAP_SIZE3, YOLOV7_FEATURE_MAP_SIZE3, anchors3, &quantInfo);
+        quantInfo.qp_scale = pVehicleObjInfo->QuantizationInfo[2].qp_scale;
+        quantInfo.qp_zp = pVehicleObjInfo->QuantizationInfo[2].qp_zp;
+        Yolov7Decoder.YoloAddOutput(YOLOV7_TINY_FEATURE_MAP_SIZE3, YOLOV7_TINY_FEATURE_MAP_SIZE3, anchors3, &quantInfo);
 
         Initialized = true;
     }
@@ -164,7 +167,7 @@ std::vector<HailoDetectionPtr> Yolov7_Decode(NetworkInferenceDetectionObjInfo* p
 }
 
 
-std::string yolov7_get_coco_name_from_int(int cls)
+std::string yolov7tiny_get_coco_name_from_int(int cls)
 {
     std::string result = "N/A";
     switch(cls) {
@@ -253,7 +256,7 @@ std::string yolov7_get_coco_name_from_int(int cls)
     return result;
 }
 
-void yolov7_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void yolov7Tiny_print_output_result(NetworkInferenceDetectionObjInfo* pVehicleObjInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -261,7 +264,7 @@ void yolov7_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t 
     if (total_detection > 0) {
         debug1 << "-I- Num detections: " << total_detection << " Classes: [";
         for (size_t i = 0; i < total_detection;i++)
-            debug1 << yolov7_get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
+            debug1 << yolov7tiny_get_coco_name_from_int(detectionsResult[i]->get_class_id()).data() << " ";
         debug1 << "]";
 
         //Show Detail Text Outputs
@@ -273,10 +276,10 @@ void yolov7_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t 
         for (size_t k = 0; k < total_detection; k++){
             QDebug debug2 = qDebug();
             debug2 << "-I- Detection Data: [";
-            debug2 << detectionsResult[k]->get_bbox().ymin() * pInfo->NetworkInputHeight << " ";
-            debug2 << detectionsResult[k]->get_bbox().xmin() * pInfo->NetworkInputWidth << " ";
-            debug2 << detectionsResult[k]->get_bbox().ymax() * pInfo->NetworkInputHeight << " ";
-            debug2 << detectionsResult[k]->get_bbox().xmax() * pInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k]->get_bbox().ymin() * pVehicleObjInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k]->get_bbox().xmin() * pVehicleObjInfo->NetworkInputWidth << " ";
+            debug2 << detectionsResult[k]->get_bbox().ymax() * pVehicleObjInfo->NetworkInputHeight << " ";
+            debug2 << detectionsResult[k]->get_bbox().xmax() * pVehicleObjInfo->NetworkInputWidth << " ";
             debug2 << detectionsResult[k]->get_class_id() << " ";
             debug2 << detectionsResult[k]->get_confidence() << " ";
 
@@ -289,9 +292,10 @@ void yolov7_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t 
 
 }
 
-int Yolov7_ShareDataCleanUp(AppImageData* pShareData) {
-    //qDebug() << "Yolov5mShareDataCleanUp";
+int Yolov7Tiny_ShareDataCleanUp(AppImageData* pImageData)
+{
+    //qDebug() << "Yolov7Tiny_ShareDataCleanUp";
 
-    delete pShareData;
+    delete pImageData;
     return 0;
 }

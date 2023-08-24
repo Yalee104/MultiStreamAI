@@ -3,10 +3,10 @@
 #include <QThread>
 #include <QElapsedTimer>
 
-void yolov5_person_face_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void yolov5_person_face_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
-int Yolov5_PersonFace_Initialize(ObjectDetectionInfo* pInitData, std::string AppID) {
+int Yolov5_PersonFace_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5mInitialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -38,7 +38,7 @@ int Yolov5_PersonFace_Initialize(ObjectDetectionInfo* pInitData, std::string App
 }
 
 
-void Yolov5_PersonFace_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
     //qDebug() << "Yolov5mInfer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -74,7 +74,7 @@ void Yolov5_PersonFace_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionDa
 }
 
 
-void Yolov5_PersonFace_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5mReadOutput";
 
@@ -93,17 +93,17 @@ void Yolov5_PersonFace_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetect
 
         //timer.start();
 
-        pData->DecodedResult = Yolov5PersonFaceDecode(pInfo, pInfo->OutputBufferUint8);
+        pInfo->DecodedResult = Yolov5PersonFaceDecode(pInfo, pInfo->OutputBufferUint8);
         //qDebug() << "output readed at " << timer.nsecsElapsed();
 
     }
 }
 
-void Yolov5_PersonFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_PersonFace_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5mVisualize";
 
-    int totalDetections = pData->DecodedResult.size();
+    int totalDetections = pInfo->DecodedResult.size();
     QPainter qPainter(&pData->VisualizedImage);
     qPainter.setPen(QPen(Qt::red, 2));
 
@@ -116,13 +116,13 @@ void Yolov5_PersonFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetecti
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k]->get_confidence() < 0.4)
+        if (pInfo->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
-        qPainter.drawRect(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
-                            pData->DecodedResult[k]->get_bbox().width()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().height()*heightScale);
+        qPainter.drawRect(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pInfo->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
 
@@ -130,12 +130,12 @@ void Yolov5_PersonFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetecti
 
     qPainter.end();
 
-    //yolov5_person_face_print_output_result(pInfo, totalDetections, pData->DecodedResult);
+    //yolov5_person_face_print_output_result(pInfo, totalDetections, pInfo->DecodedResult);
 
 }
 
 
-std::vector<HailoDetectionPtr> Yolov5PersonFaceDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov5PersonFaceDecode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode) {
     //qDebug() << "Yolov5PersonFaceDecode";
 
     static bool Initialized = false;
@@ -179,7 +179,7 @@ std::string yolov5_person_face_get_classname(int cls)
     return result;
 }
 
-void yolov5_person_face_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void yolov5_person_face_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -215,7 +215,7 @@ void yolov5_person_face_print_output_result(ObjectDetectionInfo* pInfo, size_t t
 
 }
 
-int Yolov5_PersonFace_ShareDataCleanUp(ObjectDetectionData* pShareData) {
+int Yolov5_PersonFace_ShareDataCleanUp(AppImageData* pShareData) {
     //qDebug() << "Yolov5mShareDataCleanUp";
 
     delete pShareData;

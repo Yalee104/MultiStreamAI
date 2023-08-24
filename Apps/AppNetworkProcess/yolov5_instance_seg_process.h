@@ -31,18 +31,18 @@ constexpr int YOLOV5_INS_SEG_FEATURE_MAP_SIZE3 = 80;
 constexpr int YOLOV5_INS_SEG_TOTAL_CLASS = 80;
 constexpr float YOLOV5_INS_SEG_CONFIDENCE_THRS = 0.5;
 
-int Yolov5_Instance_Seg_Initialize(ObjectDetectionInfo* pInitData, std::string AppID);
+int Yolov5_Instance_Seg_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID);
 
-std::vector<HailoDetectionPtr> Yolov5_Instance_Seg_Decode(ObjectDetectionInfo* pInitData, std::vector<std::vector<float32_t>> &OutputForDecode);
+std::vector<HailoDetectionPtr> Yolov5_Instance_Seg_Decode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<float32_t>> &OutputForDecode);
 
-int Yolov5_Instance_Seg_ShareDataCleanUp(ObjectDetectionData* pShareData);
+int Yolov5_Instance_Seg_ShareDataCleanUp(AppImageData* pShareData);
 
 
-void Yolov5_Instance_Seg_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_Instance_Seg_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void Yolov5_Instance_Seg_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_Instance_Seg_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_Instance_Seg_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
 
 #endif // YOLOV5_INS_SEG_PROCESS_H

@@ -33,18 +33,14 @@ private:
 public slots:
     void NetworkSelectionChange(QAction *action);
 
-signals:
-
-    void SendToInfer(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
-
 protected:
-    QMenu*                          pSubMenu = nullptr;
-    ObjectDetectionInfo*            pObjDetInfo = nullptr;
-    QMutex                          ResourceLock;
-    bool                            bFrameInProcess = false;
-    float                           FrameCount;
-    int                             SelectedNetworkMapping = 0;
-    int                             NewSelectedNetworkMapping = 0;
+    QMenu*                              pSubMenu = nullptr;
+    NetworkInferenceDetectionObjInfo*   pObjDetInfo = nullptr;
+    QMutex                              ResourceLock;
+    bool                                bFrameInProcess = false;
+    float                               FrameCount;
+    int                                 SelectedNetworkMapping = 0;
+    int                                 NewSelectedNetworkMapping = 0;
 };
 
 

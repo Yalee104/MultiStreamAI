@@ -12,7 +12,8 @@
 
 #include <QImage>
 
-struct ObjectDetectionInfo {
+
+struct NetworkInferenceBasedObjInfo {
     std::string                 ModelID;
     std::string                 AppID;
     int                         NetworkInputHeight;
@@ -30,13 +31,15 @@ struct ObjectDetectionInfo {
 
 };
 
-struct ObjectDetectionData {
-
+struct NetworkInferenceDetectionObjInfo : public NetworkInferenceBasedObjInfo {
     std::vector<HailoDetectionPtr>      DecodedResult;
-    QImage                              VisualizedImage;
-
 };
 
 
+struct AppImageData {
+
+    QImage                              VisualizedImage;
+    QList<QImage>                       ImageWorkerList;
+};
 
 #endif // APPCOMMON_H

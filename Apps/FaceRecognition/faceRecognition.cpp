@@ -88,11 +88,11 @@ void FaceRecognition::run()
     Timer   TimerFPS;
     TimerMs TimerFPSLimit;
 
-    pObjDetInfo = new ObjectDetectionInfo;
+    pObjDetInfo = new NetworkInferenceDetectionObjInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
     Yolov5_PersonFace_Initialize(pObjDetInfo, this->m_AppID.toStdString());
 
-    pArcFaceInfo = new FaceRecognitionInfo;
+    pArcFaceInfo = new NetworkInferenceBasedObjInfo;
     Arcface_Initialize(pArcFaceInfo, this->m_AppID.toStdString());
 
     Arface_BuildFaceDB(QString(FACE_IMAGE_DB_PATH), pArcFaceInfo);
@@ -113,7 +113,7 @@ void FaceRecognition::run()
             ResourceLock.lock();
 
 
-            ObjectDetectionData* pData = new ObjectDetectionData();
+            AppImageData* pData = new AppImageData();
             pData->VisualizedImage = m_pImageInferQueue->front().copy();
             m_pImageInferQueue->pop_front();
 
@@ -137,7 +137,7 @@ void FaceRecognition::run()
 
             //qDebug() << "4 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
-            ArcFace_ReadOutputWorker(pArcFaceInfo, pData);
+            ArcFace_ReadOutputWorker(pArcFaceInfo, pObjDetInfo, pData);
 
             //qDebug() << "5 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 

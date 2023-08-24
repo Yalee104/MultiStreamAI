@@ -3,10 +3,10 @@
 #include <QThread>
 #include <QElapsedTimer>
 
-void Yolov5_Instance_Seg_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
+void Yolov5_Instance_Seg_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult);
 
 
-int Yolov5_Instance_Seg_Initialize(ObjectDetectionInfo* pInitData, std::string AppID) {
+int Yolov5_Instance_Seg_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID) {
     //qDebug() << "Yolov5 instance seg Initialize";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -39,7 +39,7 @@ int Yolov5_Instance_Seg_Initialize(ObjectDetectionInfo* pInitData, std::string A
 }
 
 
-void Yolov5_Instance_Seg_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_Instance_Seg_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
     //qDebug() << "Yolov5 instance seg Infer";
 
     MultiNetworkPipeline *pHailoPipeline = MultiNetworkPipeline::GetInstance();
@@ -75,7 +75,7 @@ void Yolov5_Instance_Seg_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetection
 }
 
 
-void Yolov5_Instance_Seg_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_Instance_Seg_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5 instance Seg ReadOutput";
 
@@ -91,14 +91,14 @@ void Yolov5_Instance_Seg_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDete
 
         //timer.start();
 
-        pData->DecodedResult = Yolov5_Instance_Seg_Decode(pInfo, pInfo->OutputBufferFloat32);
+        pInfo->DecodedResult = Yolov5_Instance_Seg_Decode(pInfo, pInfo->OutputBufferFloat32);
         //qDebug() << "output readed at " << timer.nsecsElapsed();
-        //qDebug() << "decoded result: " << pData->DecodedResult.size();
+        //qDebug() << "decoded result: " << pInfo->DecodedResult.size();
     }
 }
 
 
-void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData) {
+void Yolov5_Instance_Seg_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData) {
 
     //qDebug() << "Yolov5_Instance_Seg_VisualizeWorker";
 
@@ -126,13 +126,13 @@ void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetec
 
 #endif
 
-    int totalDetections = pData->DecodedResult.size();
+    int totalDetections = pInfo->DecodedResult.size();
     float widthScale = (float)pInfo->NetworkInputWidth * pInfo->scaledRatioWidth;
     float heightScale = (float)pInfo->NetworkInputHeight * pInfo->scaledRatioHeight;
 
     for (int k = 0; k < totalDetections; k++){
         //We ignore all prediction is provability smaller than 50%
-        if (pData->DecodedResult[k]->get_confidence() < 0.4)
+        if (pInfo->DecodedResult[k]->get_confidence() < 0.4)
             continue;
 
 #ifdef USE_OPENCV
@@ -147,16 +147,16 @@ void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetec
                     2);
 
         cv::rectangle(  ImageCV,
-                        cv::Point(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                                    pData->DecodedResult[k]->get_bbox().ymin()*heightScale),
-                        cv::Point(  pData->DecodedResult[k]->get_bbox().xmax()*widthScale,
-                                    pData->DecodedResult[k]->get_bbox().ymax()*heightScale),
+                        cv::Point(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                                    pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale),
+                        cv::Point(  pInfo->DecodedResult[k]->get_bbox().xmax()*widthScale,
+                                    pInfo->DecodedResult[k]->get_bbox().ymax()*heightScale),
                         cv::Scalar( 255, 0, 0 ),
                         2,
                         1);
 
 
-        std::vector<HailoObjectPtr> ObjPtr = pData->DecodedResult[k]->get_objects_typed(HAILO_CLASS_MASK);
+        std::vector<HailoObjectPtr> ObjPtr = pInfo->DecodedResult[k]->get_objects_typed(HAILO_CLASS_MASK);
         HailoClassMaskPtr ClassMaskPtr = std::dynamic_pointer_cast<HailoClassMask>(ObjPtr[0]);
 
         //auto Start = std::chrono::high_resolution_clock::now();
@@ -179,16 +179,16 @@ void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetec
         cv::addWeighted(MaskImageRGB, 0.5, ImageCV, 1, 0, ImageCV);
 
 #else
-        qPainter.drawRect(  pData->DecodedResult[k]->get_bbox().xmin()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().ymin()*heightScale,
-                            pData->DecodedResult[k]->get_bbox().width()*widthScale,
-                            pData->DecodedResult[k]->get_bbox().height()*heightScale);
+        qPainter.drawRect(  pInfo->DecodedResult[k]->get_bbox().xmin()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().ymin()*heightScale,
+                            pInfo->DecodedResult[k]->get_bbox().width()*widthScale,
+                            pInfo->DecodedResult[k]->get_bbox().height()*heightScale);
 
         qPainter.drawText(5,25, QString("FPS: ") + QString::number(pInfo->PerformaceFPS, 'g', 4));
 
         /* TODO: We need to support resolution that is not 1:1 scale, see how this is done from OpenCV version above.
          *       For now we disable it since the performance is bad compare to OpenCV so we will only support mask overlay with OpenCV
-        std::vector<HailoObjectPtr> ObjPtr = pData->DecodedResult[k]->get_objects_typed(HAILO_CLASS_MASK);
+        std::vector<HailoObjectPtr> ObjPtr = pInfo->DecodedResult[k]->get_objects_typed(HAILO_CLASS_MASK);
         HailoClassMaskPtr ClassMaskPtr = std::dynamic_pointer_cast<HailoClassMask>(ObjPtr[0]);
 
         QImage image((const unsigned char*)ClassMaskPtr->get_data().data(), YOLOV5_INSTANCE_SEG_MASK_MAP_SIZE, YOLOV5_INSTANCE_SEG_MASK_MAP_SIZE, QImage::Format_Grayscale8);
@@ -219,13 +219,13 @@ void Yolov5_Instance_Seg_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetec
 
 #endif
 
-    //Yolov5_Instance_Seg_print_output_result(pInfo, totalDetections, pData->DecodedResult);
+    //Yolov5_Instance_Seg_print_output_result(pInfo, totalDetections, pInfo->DecodedResult);
 
 }
 
 
 
-std::vector<HailoDetectionPtr> Yolov5_Instance_Seg_Decode(ObjectDetectionInfo* pInitData, std::vector<std::vector<float32_t>> &OutputForDecode) {
+std::vector<HailoDetectionPtr> Yolov5_Instance_Seg_Decode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<float32_t>> &OutputForDecode) {
     //qDebug() << "Yolov5 seg Decode";
 
     static bool Initialized = false;
@@ -398,7 +398,7 @@ std::string Yolov5_Instance_Seg_get_coco_name_from_int(int cls)
     return result;
 }
 
-void Yolov5_Instance_Seg_print_output_result(ObjectDetectionInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
+void Yolov5_Instance_Seg_print_output_result(NetworkInferenceDetectionObjInfo* pInfo, size_t total_detection, std::vector<HailoDetectionPtr> &detectionsResult)
 {
 
     QDebug debug1 = qDebug();
@@ -434,7 +434,7 @@ void Yolov5_Instance_Seg_print_output_result(ObjectDetectionInfo* pInfo, size_t 
 
 }
 
-int Yolov5_Instance_Seg_ShareDataCleanUp(ObjectDetectionData* pShareData) {
+int Yolov5_Instance_Seg_ShareDataCleanUp(AppImageData* pShareData) {
     //qDebug() << "Yolov5mShareDataCleanUp";
 
     delete pShareData;

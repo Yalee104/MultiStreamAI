@@ -23,18 +23,18 @@ constexpr int FEATURE_MAP_SIZE3 = 80;
 constexpr int TOTAL_CLASS = 80;
 constexpr float CONFIDENCE_THRS = 0.5;
 
-int Yolov5mInitialize(ObjectDetectionInfo* pInitData, std::string AppID);
+int Yolov5mInitialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID);
 
-std::vector<HailoDetectionPtr> Yolov5mDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
+std::vector<HailoDetectionPtr> Yolov5mDecode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
 
-int Yolov5mShareDataCleanUp(ObjectDetectionData* pShareData);
+int Yolov5mShareDataCleanUp(AppImageData* pShareData);
 
 
-void InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
 
 #endif // YOLOV5_PROCESS_H

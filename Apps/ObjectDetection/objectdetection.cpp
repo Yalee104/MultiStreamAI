@@ -7,10 +7,10 @@
 #define APP_NAME    "Object Detection"
 
 /* Function pointer declaration */
-typedef int (*pfnNetworkInit)(ObjectDetectionInfo* pInitData, std::string AppID);
-typedef void (*pfnInfer)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
-typedef void (*pfnReadOutput)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
-typedef void (*pfnVisualize)(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+typedef int (*pfnNetworkInit)(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID);
+typedef void (*pfnInfer)(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
+typedef void (*pfnReadOutput)(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
+typedef void (*pfnVisualize)(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
 typedef struct S_sNetworkMapping
 {
@@ -164,7 +164,7 @@ void ObjectDetection::run()
     Timer   TimerFPS;
     TimerMs TimerFPSLimit;
 
-    pObjDetInfo = new ObjectDetectionInfo;
+    pObjDetInfo = new NetworkInferenceDetectionObjInfo;
     pObjDetInfo->PerformaceFPS = 0; //Just an initial value
     ObjectDetectionSupportedNetworkMappingList[SelectedNetworkMapping].NetworkInit(pObjDetInfo, this->m_AppID.toStdString());
 
@@ -176,7 +176,7 @@ void ObjectDetection::run()
         if (NewSelectedNetworkMapping != SelectedNetworkMapping) {
             delete pObjDetInfo;
             SelectedNetworkMapping = NewSelectedNetworkMapping;
-            pObjDetInfo = new ObjectDetectionInfo;
+            pObjDetInfo = new NetworkInferenceDetectionObjInfo;
             pObjDetInfo->PerformaceFPS = 0; //Just an initial value
             ObjectDetectionSupportedNetworkMappingList[SelectedNetworkMapping].NetworkInit(pObjDetInfo, this->m_AppID.toStdString());
             qDebug() << "Network CHANGED";
@@ -188,7 +188,7 @@ void ObjectDetection::run()
 
             ResourceLock.lock();
 
-            ObjectDetectionData* pData = new ObjectDetectionData();
+            AppImageData* pData = new AppImageData();
             pData->VisualizedImage = m_pImageInferQueue->front().copy();
             m_pImageInferQueue->pop_front();
 

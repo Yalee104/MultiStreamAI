@@ -27,17 +27,17 @@ constexpr float YOLO_PERSON_FACE_CONFIDENCE_THRS = 0.5;
 #define YOLO_PERSONFACE_FACE_CLASS_ID           (2)
 
 
-int Yolov5_PersonFace_Initialize(ObjectDetectionInfo* pInitData, std::string AppID);
+int Yolov5_PersonFace_Initialize(NetworkInferenceDetectionObjInfo* pInitData, std::string AppID);
 
-std::vector<HailoDetectionPtr> Yolov5PersonFaceDecode(ObjectDetectionInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
+std::vector<HailoDetectionPtr> Yolov5PersonFaceDecode(NetworkInferenceDetectionObjInfo* pInitData, std::vector<std::vector<uint8_t>> &OutputForDecode);
 
-int Yolov5_PersonFace_ShareDataCleanUp(ObjectDetectionData* pShareData);
+int Yolov5_PersonFace_ShareDataCleanUp(AppImageData* pShareData);
 
-void Yolov5_PersonFace_InferWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_PersonFace_InferWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void Yolov5_PersonFace_ReadOutputWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_PersonFace_ReadOutputWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
-void Yolov5_PersonFace_VisualizeWorker(ObjectDetectionInfo* pInfo, ObjectDetectionData* pData);
+void Yolov5_PersonFace_VisualizeWorker(NetworkInferenceDetectionObjInfo* pInfo, AppImageData* pData);
 
 
 #endif // YOLOV5_FACE_DET_PROCESS_H
