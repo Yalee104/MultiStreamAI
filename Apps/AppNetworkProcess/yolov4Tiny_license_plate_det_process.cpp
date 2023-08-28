@@ -116,7 +116,7 @@ bool Yolov4TinyLicensePlate_ReadOutputWorker(NetworkInferenceDetectionObjInfo* p
         return true;
     }
     
-    //qDebug() << "Yolov4TinyLicensePlate_ReadOutputWorker exit";
+    //qDebug() << "Yolov4TinyLicensePlate_ReadOutputWorker failed to read!!!!";
 
     return false;
 

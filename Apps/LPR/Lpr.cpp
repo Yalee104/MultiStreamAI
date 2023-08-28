@@ -231,12 +231,14 @@ void LPR::run()
 
             //qDebug() << "1 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
+
             LprObjectDetectionSupportedNetworkMappingList[SelectedNetworkMapping].InferProcess(pVehicleObjDetInfo, pAppData);
 
             LprObjectDetectionSupportedNetworkMappingList[SelectedNetworkMapping].ReadOutputProcess(pVehicleObjDetInfo, pAppData);
 
-            //qDebug() << "4 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
+            //Here we check the vehicle that is qualified to extract license plate for inference and we crop the vehicle image
+            //and save it to temporary image list for second stage (license plate detection)
             ProcessTrackerAndExtractDetectedVehiclesForLPD( pLicensePlateObjDetInfo,
                                                             pVehicleObjDetInfo,
                                                             pAppData,
@@ -245,32 +247,35 @@ void LPR::run()
             /* Second Stage
              * License Plate Detection */
 
+            //Inference all the vehicle image that is qualified for license plate detection from the saved cropped vehicle image list        
             Yolov4TinyLicensePlate_InferWorker(pLicensePlateObjDetInfo,
                                                pAppData);
 
-
+            //Here we check the result of license plate detection and check which are qualified for license plate recognition
+            //and we update the vehicle tracker state to proceed into 3rd stage 
             ProcessTrackerAndPrepareDetectedVehicleWithLpdForLPR(   pLicensePlateObjDetInfo,
                                                                     pVehicleObjDetInfo,
                                                                     pAppData,
                                                                     LprObjectDetectionSupportedNetworkMappingList[SelectedNetworkMapping].SupportedClassList);
 
-            //qDebug() << "5 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
-
             /* Third Stage
              * License Plate Recognition */
 
+            //Here we simply prepare the license plate image for LPR inference
+            //for that we use the saved vehicle image list, crop the license plate and save it back to the same temporary list
             ProcessTrackerAndExtractDetectedLpdForLPR(  pLicensePlateObjDetInfo,
                                                         pLicensePlateRecognitionInfo, 
                                                         pAppData);
 
+            //Here we infer the license plate image that is saved in the temporary image list
             LprNet_InferWorker(pLicensePlateRecognitionInfo, pAppData);
 
 
+            //Here we check the result of license plate recognition and check which are qualified
+            //and we update the vehicle tracker state to proceed into final visualization stage 
             ProcessTrackerOfLprResults( pLicensePlateRecognitionInfo,  
                                         pVehicleObjDetInfo,
                                         pAppData);
-
-            //qDebug() << "6 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
 
             /* Final Stage
@@ -282,8 +287,8 @@ void LPR::run()
             QImage FinalImage = pAppData->VisualizedImage;
             emit sendAppResultImage(FinalImage, QList<QGraphicsItem*>());
 
-            //qDebug() << "8 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
+            //qDebug() << "8 output readed at " << timer.nsecsElapsed() << "from " << this->m_AppID;
 
             delete pAppData;
 
@@ -333,6 +338,147 @@ QImage LPR::PadImage(const QImage & source, int targetWidth, int TargetHeight, T
     p.drawImage(QPoint(padWidth, padHeight), source);
     return padded;
 }
+
+
+
+void LPR::ProcessTrackerAndExtractDetectedVehiclesForLPD(   NetworkInferenceDetectionObjInfo* pLicensePlateDetInfo,
+                                                            NetworkInferenceDetectionObjInfo* pVehicleDetectionInfo,
+                                                            AppImageData* pImageData, 
+                                                            std::vector<int>    &SupportedClassList)
+{
+
+#ifdef LICENSE_PLATE_DET_TRACKER_USE
+
+
+    //Update the tracker with the latest vehicle detection result
+    std::vector<HailoDetectionPtr> LicensePlateDetTracker = HailoTracker::GetInstance().update(pVehicleDetectionInfo->AppID, pVehicleDetectionInfo->DecodedResult);
+
+    for (HailoDetectionPtr  &tracker : LicensePlateDetTracker) {
+
+        //Here we only check for supported class, otherwise we skip and continue for the next tracker
+        int trackerClassId = tracker->get_class_id();
+        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
+            continue;
+
+        auto unique_ids = hailo_common::get_hailo_unique_id(tracker);
+        if (std::find(licese_plate_det_tracked_ids_temp.begin(), licese_plate_det_tracked_ids_temp.end(), unique_ids[0]->get_id()) != licese_plate_det_tracked_ids_temp.end())
+        {
+            // We already added usermeta to this track id, we should not add it again.
+            continue;
+        }
+        else
+        {
+            licese_plate_det_tracked_ids_temp.emplace_back(unique_ids[0]->get_id());
+
+            HailoUserMetaPtr usermeta = std::make_shared<HailoUserMeta>(HailoUserMeta(LICENSE_PLATE_DET_TRACKER_INITIAL,"Tracking",0.0f));
+            HailoTracker::GetInstance().add_object_to_track(pVehicleDetectionInfo->AppID, unique_ids[0]->get_id(), usermeta);
+
+            //WARNING:          this list will keep accumulating, during actual implementation need to clean up.
+            //POSIBLE SOLUTION  Create another function(say function named A) and check all the id in licese_plate_det_tracked_ids_temp
+            //                  by calling HailoTracker::GetInstance().is_object_tracked, if returned false then remove the
+            //                  ids from licese_plate_det_tracked_ids_temp.
+            //                  This function A is to be called by main thread every few seconds for clean up purposes
+
+            //qDebug() << "list id size: " << licese_plate_det_tracked_ids_temp.size();
+            //qDebug() << "New Tracked ID: " << unique_ids[0]->get_id();
+
+        }
+    }
+
+    pVehicleDetectionInfo->DecodedResult = LicensePlateDetTracker; //Replace with updated one
+
+#else
+
+    int TestCount = 0;
+
+    //Without tracker we will simply have to pass all face object for inference
+    for (HailoDetectionPtr  &tracker : pVehicleDetectionInfo->DecodedResult) {
+
+        //Here we only check for supported class, otherwise we skip and continue for the next tracker
+        int trackerClassId = tracker->get_class_id();
+        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
+            continue;
+
+        HailoUserMetaPtr usermeta = std::make_shared<HailoUserMeta>(HailoUserMeta(LICENSE_PLATE_DET_TRACKER_NEED_PREDICT,"Tracking",0));
+        tracker->add_object(usermeta);
+    }
+
+#endif
+
+    //Get the scale between image and object detection network input size
+    float widthScale = (float)pVehicleDetectionInfo->NetworkInputWidth * (float)pVehicleDetectionInfo->scaledRatioWidth;
+    float heightScale = (float)pVehicleDetectionInfo->NetworkInputHeight * (float)pVehicleDetectionInfo->scaledRatioHeight;
+
+    //For all vehicle class we cropp the vehicle and save it to image worker list
+
+    for (HailoDetectionPtr  &tracker : pVehicleDetectionInfo->DecodedResult) {
+
+        //Here we only check for supported class, otherwise we skip and continue for the next tracker
+        int trackerClassId = tracker->get_class_id();
+        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
+            continue;
+
+
+        //Skip for vehicle that does not have metadata
+        std::vector<HailoObjectPtr> ObjPtr = tracker->get_objects_typed(HAILO_USER_META);
+        if (ObjPtr.size() == 0)
+            continue;
+
+        //Skip for vehicle that are already identified or no plate found
+        HailoUserMetaPtr UserMetaPtr = std::dynamic_pointer_cast<HailoUserMeta>(ObjPtr[0]);
+        if  ((UserMetaPtr->get_user_int() == LICENSE_PLATE_RECOGNITION_IDENTIFIED) ||
+             (UserMetaPtr->get_user_int() == LICENSE_PLATE_DET_TRACKER_NO_PLATE_FOUND))
+            continue;
+        
+        QRect rect(tracker->get_bbox().xmin()*widthScale,
+                    tracker->get_bbox().ymin()*heightScale,
+                    tracker->get_bbox().width()*widthScale,
+                    tracker->get_bbox().height()*heightScale);
+
+#if 1
+        //Here we use mask, a lower rectangle from the original image where car passing by within the mask will be taken
+        //for license plate detection, otherwise we skip. This method will save resources as we don't want all cars in the image
+        //to be infered for license plate detection.
+
+        float x =  pImageData->VisualizedImage.rect().height() * 0.3f;
+        QRect DetectionArea(0,pImageData->VisualizedImage.rect().height() - x,
+                            pImageData->VisualizedImage.rect().width(), x);
+
+        QRect intersection = DetectionArea.intersected(rect);
+
+        float overlapPercentage = ((float)(intersection.width() * intersection.height()) / (float)(rect.width() * rect.height())) * 100.0f;
+        if (overlapPercentage < 50.0f) {
+            continue;
+        }
+#else        
+        //If the rect area is at least 30% of 416x416 then we will use the whole image and set UserMetaPtr to LICENSE_PLATE_DET_TRACKER_NEED_PREDICT
+        //otherwise we skip and continue
+        //WARNING:  This may be adjusted for different streaming video resolution and angles of the camera
+        //          The intention here is to save inference time by not infering on small vehicles but without this check 
+        //          it will still work so can be safely removed if needed.
+        if ((rect.width()*rect.height()) < (pLicensePlateDetInfo->NetworkInputWidth*pLicensePlateDetInfo->NetworkInputHeight*0.3)) {
+            continue;
+        }
+#endif
+
+        QImage cropped = pImageData->VisualizedImage.copy(rect);
+
+        QImage scaledImage = cropped.scaled(pLicensePlateDetInfo->NetworkInputWidth, pLicensePlateDetInfo->NetworkInputHeight, Qt::KeepAspectRatio);
+        scaledImage.convertToFormat(QImage::Format_RGB888);
+
+        QImage padded = PadImage(scaledImage, pLicensePlateDetInfo->NetworkInputWidth, pLicensePlateDetInfo->NetworkInputHeight, Qt::gray);
+
+        //Save the vehicle image
+        pImageData->ImageWorkerList.push_back(padded);
+
+        //QString FileName2("SavedImage_Infer_padded_");
+        //padded.save(FileName2.append(QString::number(TestCount++)).append(".jpg"));
+        
+        UserMetaPtr->set_user_int(LICENSE_PLATE_DET_TRACKER_NEED_PREDICT);       
+    }
+
+}
+
 
 
 void LPR::ProcessTrackerAndPrepareDetectedVehicleWithLpdForLPR( NetworkInferenceDetectionObjInfo* pLicensePlateDetInfo,
@@ -411,6 +557,11 @@ void LPR::ProcessTrackerAndPrepareDetectedVehicleWithLpdForLPR( NetworkInference
 
                     //Save the decoded result that we want to send to OCR
                     pLicensePlateDetInfo->DecodedResult.push_back(maxConfidenceTracker);
+                }
+                else {
+
+                    //Not the image that we need to send to OCR, we remove it from the list
+                    pImageData->ImageWorkerList.pop_front();
                 }                               
             }
         }        
@@ -418,145 +569,6 @@ void LPR::ProcessTrackerAndPrepareDetectedVehicleWithLpdForLPR( NetworkInference
 
 }
 
-
-
-void LPR::ProcessTrackerAndExtractDetectedVehiclesForLPD(   NetworkInferenceDetectionObjInfo* pLicensePlateDetInfo,
-                                                            NetworkInferenceDetectionObjInfo* pVehicleDetectionInfo,
-                                                            AppImageData* pImageData, 
-                                                            std::vector<int>    &SupportedClassList)
-{
-
-#ifdef LICENSE_PLATE_DET_TRACKER_USE
-
-
-    //Update the tracker with the latest vehicle detection result
-    std::vector<HailoDetectionPtr> LicensePlateDetTracker = HailoTracker::GetInstance().update(pVehicleDetectionInfo->AppID, pVehicleDetectionInfo->DecodedResult);
-
-    for (HailoDetectionPtr  &tracker : LicensePlateDetTracker) {
-
-        //Here we only check for supported class, otherwise we skip and continue for the next tracker
-        int trackerClassId = tracker->get_class_id();
-        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
-            continue;
-
-        auto unique_ids = hailo_common::get_hailo_unique_id(tracker);
-        if (std::find(licese_plate_det_tracked_ids_temp.begin(), licese_plate_det_tracked_ids_temp.end(), unique_ids[0]->get_id()) != licese_plate_det_tracked_ids_temp.end())
-        {
-            // We already added usermeta to this track id, we should not add it again.
-            continue;
-        }
-        else
-        {
-            licese_plate_det_tracked_ids_temp.emplace_back(unique_ids[0]->get_id());
-
-            HailoUserMetaPtr usermeta = std::make_shared<HailoUserMeta>(HailoUserMeta(LICENSE_PLATE_DET_TRACKER_INITIAL,"Tracking",0.0f));
-            HailoTracker::GetInstance().add_object_to_track(pVehicleDetectionInfo->AppID, unique_ids[0]->get_id(), usermeta);
-
-            //WARNING:          this list will keep accumulating, during actual implementation need to clean up.
-            //POSIBLE SOLUTION  Create another function(say function named A) and check all the id in licese_plate_det_tracked_ids_temp
-            //                  by calling HailoTracker::GetInstance().is_object_tracked, if returned false then remove the
-            //                  ids from licese_plate_det_tracked_ids_temp.
-            //                  This function A is to be called by main thread every few seconds for clean up purposes
-
-            //qDebug() << "list id size: " << licese_plate_det_tracked_ids_temp.size();
-            //qDebug() << "New Tracked ID: " << unique_ids[0]->get_id();
-
-        }
-    }
-
-    pVehicleDetectionInfo->DecodedResult = LicensePlateDetTracker; //Replace with updated one
-
-#else
-
-    int TestCount = 0;
-
-    //Without tracker we will simply have to pass all face object for inference
-    for (HailoDetectionPtr  &tracker : pVehicleDetectionInfo->DecodedResult) {
-
-        //Here we only check for supported class, otherwise we skip and continue for the next tracker
-        int trackerClassId = tracker->get_class_id();
-        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
-            continue;
-
-        HailoUserMetaPtr usermeta = std::make_shared<HailoUserMeta>(HailoUserMeta(LICENSE_PLATE_DET_TRACKER_NEED_PREDICT,"Tracking",0));
-        tracker->add_object(usermeta);
-    }
-
-#endif
-
-    //Get the scale between image and object detection network input size
-    float widthScale = (float)pVehicleDetectionInfo->NetworkInputWidth * (float)pVehicleDetectionInfo->scaledRatioWidth;
-    float heightScale = (float)pVehicleDetectionInfo->NetworkInputHeight * (float)pVehicleDetectionInfo->scaledRatioHeight;
-
-    //For all vehicle class we cropp the vehicle and infer
-
-    for (HailoDetectionPtr  &tracker : pVehicleDetectionInfo->DecodedResult) {
-
-        //Here we only check for supported class, otherwise we skip and continue for the next tracker
-        int trackerClassId = tracker->get_class_id();
-        if (std::find(SupportedClassList.begin(), SupportedClassList.end(), trackerClassId) == SupportedClassList.end())
-            continue;
-
-
-        //Skip for vehicle that does not have metadata
-        std::vector<HailoObjectPtr> ObjPtr = tracker->get_objects_typed(HAILO_USER_META);
-        if (ObjPtr.size() == 0)
-            continue;
-
-        //Skip for vehicle that are already identified or no plate found
-        HailoUserMetaPtr UserMetaPtr = std::dynamic_pointer_cast<HailoUserMeta>(ObjPtr[0]);
-        if  ((UserMetaPtr->get_user_int() == LICENSE_PLATE_RECOGNITION_IDENTIFIED) ||
-             (UserMetaPtr->get_user_int() == LICENSE_PLATE_DET_TRACKER_NO_PLATE_FOUND))
-            continue;
-        
-        QRect rect(tracker->get_bbox().xmin()*widthScale,
-                    tracker->get_bbox().ymin()*heightScale,
-                    tracker->get_bbox().width()*widthScale,
-                    tracker->get_bbox().height()*heightScale);
-
-#if 1
-        //Here we use mask, a lower rectangle from the original image where car passing by within the mask will be taken
-        //for license plate detection, otherwise we skip. This method will save resources as we don't want all cars in the image
-        //to be infered for license plate detection.
-
-        float x =  pImageData->VisualizedImage.rect().height() * 0.3f;
-        QRect DetectionArea(0,pImageData->VisualizedImage.rect().height() - x,
-                            pImageData->VisualizedImage.rect().width(), x);
-
-        QRect intersection = DetectionArea.intersected(rect);
-
-        float overlapPercentage = ((float)(intersection.width() * intersection.height()) / (float)(rect.width() * rect.height())) * 100.0f;
-        if (overlapPercentage < 50.0f) {
-            continue;
-        }
-#else        
-        //If the rect area is at least 30% of 416x416 then we will use the whole image and set UserMetaPtr to LICENSE_PLATE_DET_TRACKER_NEED_PREDICT
-        //otherwise we skip and continue
-        //WARNING:  This may be adjusted for different streaming video resolution and angles of the camera
-        //          The intention here is to save inference time by not infering on small vehicles but without this check 
-        //          it will still work so can be safely removed if needed.
-        if ((rect.width()*rect.height()) < (pLicensePlateDetInfo->NetworkInputWidth*pLicensePlateDetInfo->NetworkInputHeight*0.3)) {
-            continue;
-        }
-#endif
-
-        QImage cropped = pImageData->VisualizedImage.copy(rect);
-
-        QImage scaledImage = cropped.scaled(pLicensePlateDetInfo->NetworkInputWidth, pLicensePlateDetInfo->NetworkInputHeight, Qt::KeepAspectRatio);
-        scaledImage.convertToFormat(QImage::Format_RGB888);
-
-        QImage padded = PadImage(scaledImage, pLicensePlateDetInfo->NetworkInputWidth, pLicensePlateDetInfo->NetworkInputHeight, Qt::gray);
-
-        //Save the vehicle image
-        pImageData->ImageWorkerList.push_back(padded);
-
-        //QString FileName2("SavedImage_Infer_padded_");
-        //padded.save(FileName2.append(QString::number(TestCount++)).append(".jpg"));
-        
-        UserMetaPtr->set_user_int(LICENSE_PLATE_DET_TRACKER_NEED_PREDICT);       
-    }
-
-}
 
 void LPR::ProcessTrackerAndExtractDetectedLpdForLPR( NetworkInferenceDetectionObjInfo* pLicensePlateDetInfo, 
                                                      NetworkInferenceBasedObjInfo* pLicensePlateRecognitionInfo, 
